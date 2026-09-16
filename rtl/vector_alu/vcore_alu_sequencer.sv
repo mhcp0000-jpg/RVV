@@ -35,23 +35,32 @@ module vcore_alu_sequencer #(
       VSEW_64: elements_per_beat = VLEN/64;
       default: elements_per_beat = 0;
     endcase
-    mask_dest = vop_is_compare(decoded_q.ctrl.op);
+    mask_dest = vop_is_compare(decoded_q.ctrl.op) ||
+                vop_is_mask_logic(decoded_q.ctrl.op);
     uop_o = '0;
     uop_o.ctrl = decoded_q.ctrl;
     uop_o.ctrl.element_base = 17'(int'(beat_index_q) * elements_per_beat);
+    uop_o.ctrl.first_beat = (beat_index_q == 0);
     uop_o.ctrl.last_beat = (int'(beat_index_q)+1 == int'(total_beats_q));
-    uop_o.ctrl.vd_addr = mask_dest ? decoded_q.vd :
+    uop_o.ctrl.vd_addr = (mask_dest || vop_is_reduction(decoded_q.ctrl.op) ||
+                              vop_is_scalar_mask_reduce(decoded_q.ctrl.op)) ?
+                              decoded_q.vd :
                               5'(int'(decoded_q.vd) + int'(beat_index_q));
     uop_o.form = decoded_q.form;
     uop_o.scalar = decoded_q.scalar;
     uop_o.mask_snapshot = decoded_q.mask_snapshot;
     uop_o.vd_addr = uop_o.ctrl.vd_addr;
-    uop_o.vs1_addr = 5'(int'(decoded_q.vs1) + int'(beat_index_q));
+    uop_o.vs1_addr = vop_is_reduction(decoded_q.ctrl.op) ? decoded_q.vs1 :
+                      5'(int'(decoded_q.vs1) + int'(beat_index_q));
     uop_o.vs2_addr = 5'(int'(decoded_q.vs2) + int'(beat_index_q));
     uop_o.read_vs1 = (decoded_q.form == VSRC_VV) &&
+                     !vop_is_scalar_mask_reduce(decoded_q.ctrl.op) &&
+                     (!vop_is_reduction(decoded_q.ctrl.op) || beat_index_q == 0) &&
                      (decoded_q.ctrl.op != VOP_INVALID);
     uop_o.read_vs2 = (decoded_q.ctrl.op != VOP_COPY_B) &&
                      (decoded_q.ctrl.op != VOP_INVALID);
+    uop_o.read_vd = !vop_is_scalar_mask_reduce(decoded_q.ctrl.op) &&
+                    (decoded_q.ctrl.op != VOP_INVALID);
     uop_o.beat_index = beat_index_q;
   end
 

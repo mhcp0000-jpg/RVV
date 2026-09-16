@@ -28,23 +28,57 @@ module vcore_alu_slice #(
     logic        sat;
   } lane_result_t;
 
+  function automatic logic [63:0] round_shift(
+    input logic signed [127:0] value,
+    input int unsigned amount,
+    input logic [1:0] vxrm,
+    input logic signed_mode
+  );
+    logic [127:0] shifted;
+    logic guard_bit, lower_nonzero, any_discarded, increment;
+    shifted = signed_mode ? $unsigned(value >>> amount) :
+                            ($unsigned(value) >> amount);
+    guard_bit = 0;
+    lower_nonzero = 0;
+    any_discarded = 0;
+    increment = 0;
+    if (amount != 0) begin
+      guard_bit = value[amount-1];
+      lower_nonzero = (value & ((128'd1 << (amount-1))-1)) != 0;
+      any_discarded = (value & ((128'd1 << amount)-1)) != 0;
+      case (vxrm)
+        2'b00: increment = guard_bit; // rnu
+        2'b01: increment = guard_bit && (lower_nonzero || shifted[0]); // rne
+        2'b10: increment = 0; // rdn
+        2'b11: increment = any_discarded && !shifted[0]; // rod
+      endcase
+    end
+    return shifted[63:0] + 64'(increment);
+  endfunction
+
   function automatic elem_result_t compute_elem(
     input logic [63:0] a_in,
     input logic [63:0] b_in,
+    input logic [63:0] old_in,
     input int unsigned width,
-    input logic [5:0] op
+    input logic [7:0] op,
+    input logic carry_bit,
+    input logic [1:0] vxrm
   );
     elem_result_t ret;
-    logic [63:0] mask_w, a, b;
+    logic [63:0] mask_w, a, b, old_value;
     logic signed [63:0] sa, sb;
     logic signed [64:0] signed_sum, signed_min, signed_max;
     logic [64:0] unsigned_sum;
+    logic signed [127:0] round_input, product_s, product_su;
+    logic [127:0] product_u;
     int unsigned shamt;
     ret = '0;
     mask_w = (width == 64) ? 64'hffff_ffff_ffff_ffff :
              (64'hffff_ffff_ffff_ffff >> (64-width));
     a = a_in & mask_w;
     b = b_in & mask_w;
+    old_value = old_in & mask_w;
     sa = $signed(a << (64-width)) >>> (64-width);
     sb = $signed(b << (64-width)) >>> (64-width);
     shamt = int'(b & 64'(width-1));
@@ -52,6 +86,10 @@ module vcore_alu_slice #(
     signed_max =  (65'sd1 <<< (width-1)) - 65'sd1;
     unsigned_sum = {1'b0,a} + {1'b0,b};
     signed_sum = '0;
+    round_input = '0;
+    product_s = '0;
+    product_su = '0;
+    product_u = '0;
 
     case (op)
       VOP_ADD:    ret.value = a + b;
@@ -75,6 +113,10 @@ module vcore_alu_slice #(
       VOP_LE:     ret.value = 64'(sa <= sb);
       VOP_GTU:    ret.value = 64'(a > b);
       VOP_GT:     ret.value = 64'(sa > sb);
+      VOP_ADC:    ret.value = a + b + 64'(carry_bit);
+      VOP_MADC:   ret.value = 64'(({1'b0,a} + {1'b0,b} + 65'(carry_bit)) >> width);
+      VOP_SBC:    ret.value = a - b - 64'(carry_bit);
+      VOP_MSBC:   ret.value = 64'({1'b0,a} < ({1'b0,b} + 65'(carry_bit)));
       VOP_SADDU: begin
         ret.sat = unsigned_sum > {1'b0,mask_w};
         ret.value = ret.sat ? mask_w : unsigned_sum[63:0];
@@ -96,6 +138,57 @@ module vcore_alu_slice #(
         ret.value = (signed_sum > signed_max) ? signed_max[63:0] :
                     (signed_sum < signed_min) ? signed_min[63:0] :
                     signed_sum[63:0];
+      end
+      VOP_AADDU, VOP_ASUBU: begin
+        unsigned_sum = (op == VOP_AADDU) ?
+                       {1'b0,a} + {1'b0,b} : {1'b0,a} - {1'b0,b};
+        round_input = {63'b0,unsigned_sum};
+        ret.value = round_shift(round_input,1,vxrm,1'b0);
+      end
+      VOP_AADD, VOP_ASUB: begin
+        signed_sum = (op == VOP_AADD) ?
+                     $signed({sa[63],sa}) + $signed({sb[63],sb}) :
+                     $signed({sa[63],sa}) - $signed({sb[63],sb});
+        round_input = {{63{signed_sum[64]}},signed_sum};
+        ret.value = round_shift(round_input,1,vxrm,1'b1);
+      end
+      VOP_SSRL: begin
+        round_input = {64'b0,a};
+        ret.value = round_shift(round_input,shamt,vxrm,1'b0);
+      end
+      VOP_SSRA: begin
+        round_input = {{64{sa[63]}},sa};
+        ret.value = round_shift(round_input,shamt,vxrm,1'b1);
+      end
+      VOP_SMUL: begin
+        product_s = sa * sb;
+        ret.sat = (a == (64'd1 << (width-1))) &&
+                  (b == (64'd1 << (width-1)));
+        ret.value = ret.sat ? signed_max[63:0] :
+                    round_shift(product_s,width-1,vxrm,1'b1);
+      end
+      VOP_MUL, VOP_MULHU, VOP_MULHSU, VOP_MULH,
+      VOP_MADD, VOP_NMSUB, VOP_MACC, VOP_NMSAC: begin
+        product_u = 128'(a) * 128'(b);
+        product_s = sa * sb;
+        product_su = sa * $signed({1'b0,b});
+        case (op)
+          VOP_MUL:    ret.value = product_u[63:0];
+          VOP_MULHU:  ret.value = 64'(product_u >> width);
+          VOP_MULHSU: ret.value = 64'(product_su >>> width);
+          VOP_MULH:   ret.value = 64'(product_s >>> width);
+          VOP_MACC:   ret.value = old_value + product_u[63:0];
+          VOP_NMSAC:  ret.value = old_value - product_u[63:0];
+          VOP_MADD: begin
+            product_u = 128'(old_value) * 128'(b);
+            ret.value = a + product_u[63:0];
+          end
+          VOP_NMSUB: begin
+            product_u = 128'(old_value) * 128'(b);
+            ret.value = a - product_u[63:0];
+          end
+          default: ;
+        endcase
       end
       VOP_COPY_B: ret.value = b;
       default:    ret.value = a;
@@ -121,7 +214,8 @@ module vcore_alu_slice #(
     ret.data = old_data;
     ret.mask_bit = old_mask;
     is_compare = vop_is_compare(ctrl.op);
-    calculation = compute_elem(a,b,width,ctrl.op);
+    calculation = compute_elem(a,b,old_data,width,ctrl.op,
+                               !ctrl.vm && mask_bit,ctrl.vxrm);
 
     if (ctrl.vstart >= ctrl.vl) begin
       // RVV leaves even tail elements unchanged when the body is empty.
@@ -130,7 +224,8 @@ module vcore_alu_slice #(
     end else if (global_index >= ctrl.vl) begin
       if (is_compare) ret.mask_bit = 1'b1; // mask tails are agnostic
       else if (ctrl.vta) ret.data = '1;
-    end else if (!ctrl.vm && !mask_bit && ctrl.op != VOP_MERGE) begin
+    end else if (!ctrl.vm && !mask_bit && ctrl.op != VOP_MERGE &&
+                 !vop_uses_carry(ctrl.op)) begin
       if (is_compare) begin
         if (ctrl.vma) ret.mask_bit = 1'b1;
       end else if (ctrl.vma) ret.data = '1;
@@ -156,7 +251,28 @@ module vcore_alu_slice #(
     global_index = '0;
     local_index = 0;
 
-    case (ctrl_i.sew)
+    if (vop_is_mask_logic(ctrl_i.op)) begin
+      for (int unsigned bit_index = 0; bit_index < SLICE_W; bit_index++) begin
+        global_index = 17'((high_half_i ? SLICE_W : 0) + bit_index);
+        if (ctrl_i.vstart < ctrl_i.vl &&
+            global_index >= ctrl_i.vstart && global_index < ctrl_i.vl) begin
+          case (ctrl_i.op)
+            VOP_MANDN: data_o[bit_index] = src2_i[bit_index] & ~src1_i[bit_index];
+            VOP_MAND:  data_o[bit_index] = src2_i[bit_index] & src1_i[bit_index];
+            VOP_MOR:   data_o[bit_index] = src2_i[bit_index] | src1_i[bit_index];
+            VOP_MXOR:  data_o[bit_index] = src2_i[bit_index] ^ src1_i[bit_index];
+            VOP_MORN:  data_o[bit_index] = src2_i[bit_index] | ~src1_i[bit_index];
+            VOP_MNAND: data_o[bit_index] = ~(src2_i[bit_index] & src1_i[bit_index]);
+            VOP_MNOR:  data_o[bit_index] = ~(src2_i[bit_index] | src1_i[bit_index]);
+            VOP_MXNOR: data_o[bit_index] = ~(src2_i[bit_index] ^ src1_i[bit_index]);
+            default: ;
+          endcase
+        end else if (ctrl_i.vstart < ctrl_i.vl && global_index >= ctrl_i.vl) begin
+          // Mask destination tail bits are agnostic; all ones is legal.
+          data_o[bit_index] = 1'b1;
+        end
+      end
+    end else case (ctrl_i.sew)
       VSEW_8: begin
         for (int unsigned i = 0; i < SLICE_W/8; i++) begin
           local_index = (high_half_i ? SLICE_W/8 : 0) + i;

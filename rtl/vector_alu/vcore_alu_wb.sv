@@ -36,6 +36,9 @@ module vcore_alu_wb #(
   assign commit_o.tag = meta_q.tag;
   assign commit_o.last_beat = meta_q.last_beat;
   assign commit_o.vxsat = meta_q.vxsat;
+  assign commit_o.scalar_valid = meta_q.scalar_valid;
+  assign commit_o.scalar_rd = meta_q.scalar_rd;
+  assign commit_o.scalar_data = meta_q.scalar_data;
   assign commit_o.illegal_op = meta_q.illegal_op;
   assign seq_ack_o = commit_o;
 
@@ -51,7 +54,7 @@ module vcore_alu_wb #(
         WB_IDLE: if (result_valid_i && result_ready_o) begin
           data_q <= result_i;
           meta_q <= result_meta_i;
-          if (result_meta_i.illegal_op) begin
+          if (result_meta_i.illegal_op || !result_meta_i.write_enable) begin
             top_pending_q <= 1'b1;
             seq_pending_q <= 1'b1;
             state_q <= WB_EVENT;

@@ -96,20 +96,23 @@ module vcore_alu_vrf_request #(
           if (uop_i.ctrl.op == VOP_INVALID) state_q <= VRF_EXEC;
           else if (uop_i.read_vs2) state_q <= VRF_SRC2_REQ;
           else if (uop_i.read_vs1) state_q <= VRF_SRC1_REQ;
-          else state_q <= VRF_DST_REQ;
+          else if (uop_i.read_vd) state_q <= VRF_DST_REQ;
+          else state_q <= VRF_EXEC;
         end
         VRF_SRC2_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
           state_q <= VRF_SRC2_RSP;
         VRF_SRC2_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
           src2_q <= vrf_rsp_data_i;
           if (uop_q.read_vs1) state_q <= VRF_SRC1_REQ;
-          else state_q <= VRF_DST_REQ;
+          else if (uop_q.read_vd) state_q <= VRF_DST_REQ;
+          else state_q <= VRF_EXEC;
         end
         VRF_SRC1_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
           state_q <= VRF_SRC1_RSP;
         VRF_SRC1_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
           src1_q <= vrf_rsp_data_i;
-          state_q <= VRF_DST_REQ;
+          if (uop_q.read_vd) state_q <= VRF_DST_REQ;
+          else state_q <= VRF_EXEC;
         end
         VRF_DST_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
           state_q <= VRF_DST_RSP;
