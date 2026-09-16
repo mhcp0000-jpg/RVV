@@ -101,6 +101,7 @@ package vcore_alu_pkg;
     logic [7:0]  op;
     logic [2:0]  sew;
     logic [1:0]  vxrm;          // fixed-point rounding mode
+    logic [2:0]  frm;           // scalar FP rounding mode for FP arithmetic
     logic        vm;            // instruction bit 25: 1 = unmasked
     logic        vta;           // vtype tail policy
     logic        vma;           // vtype masked-off policy
@@ -138,6 +139,7 @@ package vcore_alu_pkg;
     logic [2:0]  sew;           // decoded vtype.vsew
     logic [2:0]  vlmul;         // decoded vtype.vlmul
     logic [1:0]  vxrm;          // CSR vxrm
+    logic [2:0]  frm;           // CSR frm
     logic        vta;
     logic        vma;
     logic        vill;

@@ -37,6 +37,7 @@ module vcore_alu_decode #(
     decoded_o.ctrl.op = VOP_INVALID;
     decoded_o.ctrl.sew = cmd_i.sew;
     decoded_o.ctrl.vxrm = cmd_i.vxrm;
+    decoded_o.ctrl.frm = cmd_i.frm;
     decoded_o.ctrl.vm = cmd_i.inst[25];
     decoded_o.ctrl.vta = cmd_i.vta;
     decoded_o.ctrl.vma = cmd_i.vma;

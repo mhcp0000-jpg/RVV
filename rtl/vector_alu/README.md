@@ -40,6 +40,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 | `sew[2:0]` | vtype.vsew | 0/1/2/3 = 8/16/32/64 |
 | `vlmul[2:0]` | vtype.vlmul | 000/001/010/011 = m1/m2/m4/m8, 111/110/101 = mf2/mf4/mf8 |
 | `vxrm[1:0]` | CSR vxrm | fixed point 평균·rounded shift·`vsmul`의 반올림 모드 |
+| `frm[2:0]` | CSR frm | FP 산술 반올림 모드. 현재 FP32 비트 조작·비교에는 사용하지 않음 |
 | `vta`, `vma`, `vill` | vtype | tail, inactive mask 정책 및 illegal vtype |
 | `vl[16:0]`, `vstart[16:0]` | CSR | 요소 수 및 재시작 위치 |
 | `mask_snapshot[127:0]` | TOP의 v0 복제 FF | **명령 수락 시점의 일관된 v0 값**, bit `i`가 요소 `i`의 마스크 |
@@ -47,7 +48,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 
 `v0`는 CSR이 아닙니다. TOP은 VRF의 v0에 대한 모든 writeback을 복제 FF에도 반영하고, v0를 갱신하는 앞선 명령이 남아 있으면 forwarding하거나 이 ALU에 다음 명령을 발행하기 전에 기다려야 합니다. ALU는 마스크를 얻기 위해 VRF의 읽기 포트를 추가 사용하지 않습니다. 한 명령의 모든 LMUL beat는 **동일한** `mask_snapshot`을 사용합니다.
 
-포화 연산의 `vxsat`과 FP의 `fflags[4:0]`은 `commit_o`에서 beat별로 보고하므로 TOP이 sticky CSR에 OR합니다. 현재 FP32 부호·분류·min/max·비교 명령을 지원합니다. FP 산술 연산을 추가할 때는 `frm` 입력도 필요합니다. TOP이 마지막 beat를 수락하면 architectural `vstart`를 0으로 정리합니다.
+포화 연산의 `vxsat`과 FP의 `fflags[4:0]`은 `commit_o`에서 beat별로 보고하므로 TOP이 sticky CSR에 OR합니다. 현재 FP32 부호·분류·min/max·비교 명령을 지원합니다. FP 산술은 `frm`을 받아 명령마다 정확히 한 번 반올림하도록 구현해야 합니다. TOP이 마지막 beat를 수락하면 architectural `vstart`를 0으로 정리합니다.
 
 ## VRF 및 writeback 계약
 
