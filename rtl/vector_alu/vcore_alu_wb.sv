@@ -36,6 +36,7 @@ module vcore_alu_wb #(
   assign commit_o.tag = meta_q.tag;
   assign commit_o.last_beat = meta_q.last_beat;
   assign commit_o.vxsat = meta_q.vxsat;
+  assign commit_o.fflags = meta_q.fflags;
   assign commit_o.scalar_valid = meta_q.scalar_valid;
   assign commit_o.scalar_rd = meta_q.scalar_rd;
   assign commit_o.scalar_data = meta_q.scalar_data;

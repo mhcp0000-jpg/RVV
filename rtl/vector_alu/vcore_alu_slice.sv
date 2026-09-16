@@ -13,19 +13,22 @@ module vcore_alu_slice #(
   input  vcore_alu_pkg::vcore_alu_ctrl_t ctrl_i,
   output logic [SLICE_W-1:0]             data_o,
   output logic [VLEN-1:0]                mask_dst_o,
-  output logic                           vxsat_o
+  output logic                           vxsat_o,
+  output logic [4:0]                     fflags_o
 );
   import vcore_alu_pkg::*;
 
   typedef struct packed {
     logic [63:0] value;
     logic        sat;
+    logic [4:0]  fflags;
   } elem_result_t;
 
   typedef struct packed {
     logic [63:0] data;
     logic        mask_bit;
     logic        sat;
+    logic [4:0]  fflags;
   } lane_result_t;
 
   function automatic logic [63:0] round_shift(
@@ -72,6 +75,8 @@ module vcore_alu_slice #(
     logic [64:0] unsigned_sum;
     logic signed [127:0] round_input, product_s, product_su;
     logic [127:0] product_u;
+    logic fp_sign, fp_is_nan, fp_is_inf, fp_is_zero, fp_is_subnormal;
+    logic fp_b_nan, fp_a_snan, fp_b_snan, fp_equal, fp_less;
     int unsigned shamt;
     ret = '0;
     mask_w = (width == 64) ? 64'hffff_ffff_ffff_ffff :
@@ -90,6 +95,22 @@ module vcore_alu_slice #(
     product_s = '0;
     product_su = '0;
     product_u = '0;
+    fp_sign = a[31];
+    fp_is_nan = (a[30:23] == 8'hff) && (a[22:0] != 0);
+    fp_is_inf = (a[30:23] == 8'hff) && (a[22:0] == 0);
+    fp_is_zero = (a[30:23] == 0) && (a[22:0] == 0);
+    fp_is_subnormal = (a[30:23] == 0) && (a[22:0] != 0);
+    fp_b_nan = (b[30:23] == 8'hff) && (b[22:0] != 0);
+    fp_a_snan = fp_is_nan && !a[22];
+    fp_b_snan = fp_b_nan && !b[22];
+    fp_equal = (a[31:0] == b[31:0]) ||
+               ((a[30:0] == 0) && (b[30:0] == 0));
+    fp_less = 1'b0;
+    if (a[30:0] != 0 || b[30:0] != 0) begin
+      if (a[31] != b[31]) fp_less = a[31];
+      else if (a[31]) fp_less = (a[30:0] > b[30:0]);
+      else fp_less = (a[30:0] < b[30:0]);
+    end
 
     case (op)
       VOP_ADD:    ret.value = a + b;
@@ -191,6 +212,44 @@ module vcore_alu_slice #(
         endcase
       end
       VOP_COPY_B: ret.value = b;
+      VOP_FSGNJ:  ret.value = 64'({b[31],a[30:0]});
+      VOP_FSGNJN: ret.value = 64'({~b[31],a[30:0]});
+      VOP_FSGNJX: ret.value = 64'({a[31]^b[31],a[30:0]});
+      VOP_FCLASS: begin
+        if (fp_is_nan) ret.value = a[22] ? 64'h200 : 64'h100;
+        else if (fp_is_inf) ret.value = fp_sign ? 64'h001 : 64'h080;
+        else if (fp_is_zero) ret.value = fp_sign ? 64'h008 : 64'h010;
+        else if (fp_is_subnormal) ret.value = fp_sign ? 64'h004 : 64'h020;
+        else ret.value = fp_sign ? 64'h002 : 64'h040;
+      end
+      VOP_FMIN, VOP_FMAX: begin
+        ret.fflags[4] = fp_a_snan || fp_b_snan;
+        if (fp_is_nan && fp_b_nan) ret.value = 64'h7fc0_0000;
+        else if (fp_is_nan) ret.value = b;
+        else if (fp_b_nan) ret.value = a;
+        else if (a[30:0] == 0 && b[30:0] == 0)
+          ret.value = (op == VOP_FMIN) ?
+                      64'({a[31] | b[31],31'b0}) :
+                      64'({a[31] & b[31],31'b0});
+        else if (op == VOP_FMIN) ret.value = fp_less ? a : b;
+        else ret.value = fp_less ? b : a;
+      end
+      VOP_FEQ, VOP_FNE, VOP_FLE, VOP_FLT, VOP_FGT, VOP_FGE: begin
+        ret.fflags[4] = (op == VOP_FEQ || op == VOP_FNE) ?
+                         (fp_a_snan || fp_b_snan) :
+                         (fp_is_nan || fp_b_nan);
+        if (fp_is_nan || fp_b_nan)
+          ret.value = (op == VOP_FNE) ? 64'd1 : 64'd0;
+        else case (op)
+          VOP_FEQ: ret.value = 64'(fp_equal);
+          VOP_FNE: ret.value = 64'(!fp_equal);
+          VOP_FLT: ret.value = 64'(fp_less);
+          VOP_FLE: ret.value = 64'(fp_less || fp_equal);
+          VOP_FGT: ret.value = 64'(!fp_less && !fp_equal);
+          VOP_FGE: ret.value = 64'(!fp_less);
+          default: ;
+        endcase
+      end
       default:    ret.value = a;
     endcase
     ret.value &= mask_w;
@@ -233,9 +292,11 @@ module vcore_alu_slice #(
       ret.data = mask_bit ? b : a;
     end else if (is_compare) begin
       ret.mask_bit = calculation.value[0];
+      ret.fflags = calculation.fflags;
     end else begin
       ret.data = calculation.value;
       ret.sat = calculation.sat;
+      ret.fflags = calculation.fflags;
     end
     return ret;
   endfunction
@@ -247,6 +308,7 @@ module vcore_alu_slice #(
     data_o = old_data_i;
     mask_dst_o = old_mask_dst_i;
     vxsat_o = 1'b0;
+    fflags_o = '0;
     lane = '0;
     global_index = '0;
     local_index = 0;
@@ -285,6 +347,7 @@ module vcore_alu_slice #(
           data_o[i*8 +: 8] = lane.data[7:0];
           mask_dst_o[global_index[6:0]] = lane.mask_bit;
           vxsat_o |= lane.sat;
+          fflags_o |= lane.fflags;
         end
       end
       VSEW_16: begin
@@ -299,6 +362,7 @@ module vcore_alu_slice #(
           data_o[i*16 +: 16] = lane.data[15:0];
           mask_dst_o[global_index[6:0]] = lane.mask_bit;
           vxsat_o |= lane.sat;
+          fflags_o |= lane.fflags;
         end
       end
       VSEW_32: begin
@@ -313,6 +377,7 @@ module vcore_alu_slice #(
           data_o[i*32 +: 32] = lane.data[31:0];
           mask_dst_o[global_index[6:0]] = lane.mask_bit;
           vxsat_o |= lane.sat;
+          fflags_o |= lane.fflags;
         end
       end
       VSEW_64: begin
@@ -326,6 +391,7 @@ module vcore_alu_slice #(
           data_o[i*64 +: 64] = lane.data;
           mask_dst_o[global_index[6:0]] = lane.mask_bit;
           vxsat_o |= lane.sat;
+          fflags_o |= lane.fflags;
         end
       end
       default: begin

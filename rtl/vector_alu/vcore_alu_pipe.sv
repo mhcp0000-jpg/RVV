@@ -34,6 +34,7 @@ module vcore_alu_pipe #(
   logic [SLICE_W-1:0] low_data_q;
   logic [VLEN-1:0] low_mask_dst_q;
   logic low_vxsat_q;
+  logic [4:0] low_fflags_q;
   logic illegal_q;
   logic [63:0] reduction_acc_q, reduction_next;
   logic [VLEN-1:0] reduction_src_q;
@@ -63,6 +64,7 @@ module vcore_alu_pipe #(
   logic [SLICE_W-1:0] slice_data;
   logic [VLEN-1:0] slice_mask_dst;
   logic slice_vxsat;
+  logic [4:0] slice_fflags;
   logic rsp_slot_ready;
   logic req_fire, finish_fire;
 
@@ -141,7 +143,8 @@ module vcore_alu_pipe #(
     .ctrl_i        (slice_ctrl),
     .data_o        (slice_data),
     .mask_dst_o    (slice_mask_dst),
-    .vxsat_o       (slice_vxsat)
+    .vxsat_o       (slice_vxsat),
+    .fflags_o      (slice_fflags)
   );
 
   always_comb begin
@@ -255,6 +258,7 @@ module vcore_alu_pipe #(
       low_data_q <= '0;
       low_mask_dst_q <= '0;
       low_vxsat_q <= 1'b0;
+      low_fflags_q <= '0;
       illegal_q <= 1'b0;
       reduction_acc_q <= '0;
       reduction_src_q <= '0;
@@ -292,6 +296,7 @@ module vcore_alu_pipe #(
           low_data_q <= slice_data;
           low_mask_dst_q <= slice_mask_dst;
           low_vxsat_q <= slice_vxsat;
+          low_fflags_q <= slice_fflags;
         end
         illegal_q <= !vop_supported(ctrl_i.op) || !vsew_supported(ctrl_i.sew);
         if (vop_is_reduction(ctrl_i.op)) begin
@@ -323,6 +328,7 @@ module vcore_alu_pipe #(
         rsp_meta_q.vd_addr <= ctrl_q.vd_addr;
         rsp_meta_q.last_beat <= ctrl_q.last_beat;
         rsp_meta_q.vxsat <= illegal_q ? 1'b0 : (low_vxsat_q | slice_vxsat);
+        rsp_meta_q.fflags <= illegal_q ? 5'b0 : (low_fflags_q | slice_fflags);
         rsp_meta_q.write_enable <= !illegal_q;
         rsp_meta_q.scalar_valid <= 1'b0;
         rsp_meta_q.scalar_rd <= '0;
@@ -343,6 +349,7 @@ module vcore_alu_pipe #(
           rsp_meta_q.vd_addr <= ctrl_q.vd_addr;
           rsp_meta_q.last_beat <= ctrl_q.last_beat;
           rsp_meta_q.vxsat <= 1'b0;
+          rsp_meta_q.fflags <= '0;
           rsp_meta_q.write_enable <= ctrl_q.last_beat && (ctrl_q.vl != 0);
           rsp_meta_q.scalar_valid <= 1'b0;
           rsp_meta_q.scalar_rd <= '0;
@@ -364,6 +371,7 @@ module vcore_alu_pipe #(
           rsp_meta_q.vd_addr <= ctrl_q.vd_addr;
           rsp_meta_q.last_beat <= 1'b1;
           rsp_meta_q.vxsat <= 1'b0;
+          rsp_meta_q.fflags <= '0;
           rsp_meta_q.write_enable <= 1'b0;
           rsp_meta_q.scalar_valid <= 1'b1;
           rsp_meta_q.scalar_rd <= ctrl_q.vd_addr;
@@ -382,6 +390,7 @@ module vcore_alu_pipe #(
             rsp_meta_q.vd_addr <= ctrl_q.vd_addr;
             rsp_meta_q.last_beat <= ctrl_q.last_beat;
             rsp_meta_q.vxsat <= 1'b0;
+            rsp_meta_q.fflags <= '0;
             rsp_meta_q.write_enable <= 1'b1;
             rsp_meta_q.scalar_valid <= 1'b0;
             rsp_meta_q.scalar_rd <= '0;

@@ -67,6 +67,12 @@ NEW_FORMS = {
     "vmadd": {"vv", "vx"}, "vnmsub": {"vv", "vx"},
     "vdivu": {"vv", "vx"}, "vdiv": {"vv", "vx"},
     "vremu": {"vv", "vx"}, "vrem": {"vv", "vx"},
+    "vfsgnj": {"vv", "vf"}, "vfsgnjn": {"vv", "vf"},
+    "vfsgnjx": {"vv", "vf"}, "vfclass": {"v"},
+    "vfmin": {"vv", "vf"}, "vfmax": {"vv", "vf"},
+    "vmfeq": {"vv", "vf"}, "vmfle": {"vv", "vf"},
+    "vmflt": {"vv", "vf"}, "vmfne": {"vv", "vf"},
+    "vmfgt": {"vf"}, "vmfge": {"vf"},
     "vmandn": {"mm"}, "vmand": {"mm"},
     "vmor": {"mm"}, "vmxor": {"mm"},
     "vmorn": {"mm"}, "vmnand": {"mm"},
@@ -148,7 +154,7 @@ def main() -> None:
                 "tb_vcore_alu_top" if name in {
                     "vadd.vv", "vmseq.vv", "vredsum.vs", "vwredsumu.vs",
                     "vcpop.m", "vfirst.m", "vmacc.vx", "vmxor.mm",
-                    "vdivu.vx"
+                    "vdivu.vx", "vfsgnj.vf", "vfclass.v", "vmfle.vf"
                 } else ""
             ),
             "spec_corner_test": prior.get("spec_corner_test") or (
@@ -159,7 +165,10 @@ def main() -> None:
                 "first-set index" if name == "vfirst.m" else
                 "m2, destructive vd" if name == "vmacc.vx" else
                 "m2, unaligned mask registers, tail bits" if name == "vmxor.mm" else
-                "masked lanes, divide by 2" if name == "vdivu.vx" else ""
+                "masked lanes, divide by 2" if name == "vdivu.vx" else
+                "scalar FP32 sign bits" if name == "vfsgnj.vf" else
+                "zero, infinity, sNaN, qNaN" if name == "vfclass.v" else
+                "NaN invalid flag and mask result" if name == "vmfle.vf" else ""
             ),
             "notes": prior.get("notes", ""),
         }

@@ -12,7 +12,7 @@ module vcore_alu_decode #(
 
   logic [2:0] funct3;
   logic [5:0] funct6;
-  logic form_vv, form_vx, form_vi, form_valid, opiv, opm;
+  logic form_vv, form_vx, form_vi, form_valid, opiv, opm, opf;
   logic operation_valid;
   logic [3:0] beats;
   int unsigned sew_bits, fraction_div, max_elements;
@@ -24,8 +24,11 @@ module vcore_alu_decode #(
   assign opiv = (funct3 == 3'b000) || (funct3 == 3'b100) ||
                 (funct3 == 3'b011);
   assign opm = (funct3 == 3'b010) || (funct3 == 3'b110);
-  assign form_vv = (funct3 == 3'b000) || (funct3 == 3'b010);
-  assign form_vx = (funct3 == 3'b100) || (funct3 == 3'b110);
+  assign opf = (funct3 == 3'b001) || (funct3 == 3'b101);
+  assign form_vv = (funct3 == 3'b000) || (funct3 == 3'b010) ||
+                   (funct3 == 3'b001);
+  assign form_vx = (funct3 == 3'b100) || (funct3 == 3'b110) ||
+                   (funct3 == 3'b101);
   assign form_vi = (funct3 == 3'b011);
   assign form_valid = form_vv || form_vx || form_vi;
 
@@ -146,6 +149,30 @@ module vcore_alu_decode #(
         operation_valid &= (funct3 == 3'b010) && cmd_i.inst[25];
       if (vop_is_reduction(decoded_o.ctrl.op))
         operation_valid &= (funct3 == 3'b010);
+    end else if (opf) begin
+      case (funct6)
+        6'h04: decoded_o.ctrl.op = VOP_FMIN;
+        6'h06: decoded_o.ctrl.op = VOP_FMAX;
+        6'h08: decoded_o.ctrl.op = VOP_FSGNJ;
+        6'h09: decoded_o.ctrl.op = VOP_FSGNJN;
+        6'h0a: decoded_o.ctrl.op = VOP_FSGNJX;
+        6'h13: begin
+          decoded_o.ctrl.op = VOP_FCLASS;
+          operation_valid &= (funct3 == 3'b001) &&
+                             (cmd_i.inst[19:15] == 5'h10);
+        end
+        6'h18: decoded_o.ctrl.op = VOP_FEQ;
+        6'h19: decoded_o.ctrl.op = VOP_FLE;
+        6'h1b: decoded_o.ctrl.op = VOP_FLT;
+        6'h1c: decoded_o.ctrl.op = VOP_FNE;
+        6'h1d: begin decoded_o.ctrl.op = VOP_FGT;
+          operation_valid &= (funct3 == 3'b101); end
+        6'h1f: begin decoded_o.ctrl.op = VOP_FGE;
+          operation_valid &= (funct3 == 3'b101); end
+        default: operation_valid = 1'b0;
+      endcase
+      // RV32IMFC has F, but no D or Zfh: floating SEW is 32 only.
+      operation_valid &= (cmd_i.sew == VSEW_32);
     end else operation_valid = 1'b0;
 
     if (form_vi)

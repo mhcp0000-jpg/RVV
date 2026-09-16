@@ -23,6 +23,7 @@ module tb_vcore_alu_top;
   int scalar_count = 0;
   logic [31:0] last_scalar_data = '0;
   logic [4:0] last_scalar_rd = '0;
+  logic [4:0] last_fflags = '0;
 
   vcore_alu_top dut (
     .clk_i(clk), .rst_ni(rst_n), .flush_i(flush),
@@ -49,6 +50,7 @@ module tb_vcore_alu_top;
       scalar_count <= 0;
       last_scalar_data <= '0;
       last_scalar_rd <= '0;
+      last_fflags <= '0;
     end else begin
       if (rd_rsp_valid && rd_rsp_ready) rd_rsp_valid <= 0;
       if (rd_valid && rd_ready) begin
@@ -69,6 +71,7 @@ module tb_vcore_alu_top;
           last_scalar_rd <= commit_data.scalar_rd;
         end
         commit_count <= commit_count + 1;
+        last_fflags <= commit_data.fflags;
         if (commit_data.last_beat) last_seen <= 1;
       end
     end
@@ -272,6 +275,36 @@ module tb_vcore_alu_top;
     await_commits(31);
     if (mem[24] !== {32'd10,32'd1,32'd10,32'd0} || write_count != 12)
       $fatal(1,"masked vdivu.vx mismatch: %h",mem[24]);
+
+    // .vf receives the raw FP32 register bits in cmd.scalar from TOP.
+    mem[2] = {4{32'h3f80_0000}};
+    cmd.inst = {6'h08,1'b1,5'd2,5'd3,3'b101,5'd25,7'h57};
+    cmd.scalar = 32'h8000_0000;
+    cmd.tag = 16'h64;
+    send_command();
+    await_commits(32);
+    if (mem[25] !== {4{32'hbf80_0000}} || write_count != 13)
+      $fatal(1,"vfsgnj.vf mismatch: %h",mem[25]);
+
+    mem[2] = {32'h7fc0_0001,32'h7f80_0001,32'h8000_0000,32'h7f80_0000};
+    cmd.inst = {6'h13,1'b1,5'd2,5'h10,3'b001,5'd26,7'h57};
+    cmd.tag = 16'h65;
+    send_command();
+    await_commits(33);
+    if (mem[26] !== {32'h200,32'h100,32'h008,32'h080} ||
+        write_count != 14)
+      $fatal(1,"vfclass.v mismatch: %h",mem[26]);
+
+    mem[2] = {32'h7fc0_0001,32'h3f80_0000,32'h8000_0000,32'h4000_0000};
+    cmd.inst = {6'h19,1'b1,5'd2,5'd3,3'b101,5'd27,7'h57};
+    cmd.scalar = 32'h3f80_0000;
+    cmd.tag = 16'h66;
+    send_command();
+    await_commits(34);
+    if (mem[27][3:0] !== 4'b0110 || last_fflags != 5'h10 ||
+        write_count != 15)
+      $fatal(1,"vmfle.vf mask/invalid mismatch data=%h flags=%h",
+             mem[27],last_fflags);
 
     $display("tb_vcore_alu_top PASS");
     $finish;

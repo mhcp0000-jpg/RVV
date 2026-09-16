@@ -82,6 +82,18 @@ package vcore_alu_pkg;
     VOP_DIV      = 8'd67,
     VOP_REMU     = 8'd68,
     VOP_REM      = 8'd69,
+    VOP_FSGNJ    = 8'd70,
+    VOP_FSGNJN   = 8'd71,
+    VOP_FSGNJX   = 8'd72,
+    VOP_FCLASS   = 8'd73,
+    VOP_FMIN     = 8'd74,
+    VOP_FMAX     = 8'd75,
+    VOP_FEQ      = 8'd76,
+    VOP_FLE      = 8'd77,
+    VOP_FLT      = 8'd78,
+    VOP_FNE      = 8'd79,
+    VOP_FGT      = 8'd80,
+    VOP_FGE      = 8'd81,
     VOP_INVALID  = 8'hff
   } vop_e;
 
@@ -106,6 +118,7 @@ package vcore_alu_pkg;
     logic [4:0]  vd_addr;
     logic        last_beat;
     logic        vxsat;         // pulse to OR into sticky CSR vxsat on retirement
+    logic [4:0]  fflags;        // FP accrued flags; bit 4 is invalid (NV)
     logic        write_enable;  // intermediate reduction beats do not write VRF
     logic        scalar_valid;
     logic [4:0]  scalar_rd;
@@ -174,6 +187,7 @@ package vcore_alu_pkg;
     logic [15:0] tag;
     logic        last_beat;
     logic        vxsat;
+    logic [4:0]  fflags;
     logic        scalar_valid;
     logic [4:0]  scalar_rd;
     logic [31:0] scalar_data;
@@ -183,7 +197,9 @@ package vcore_alu_pkg;
   function automatic logic vop_is_compare(input logic [7:0] op);
     case (op)
       VOP_EQ, VOP_NE, VOP_LTU, VOP_LT, VOP_LEU, VOP_LE,
-      VOP_GTU, VOP_GT, VOP_MADC, VOP_MSBC: return 1'b1;
+      VOP_GTU, VOP_GT, VOP_MADC, VOP_MSBC,
+      VOP_FEQ, VOP_FLE, VOP_FLT, VOP_FNE, VOP_FGT, VOP_FGE:
+        return 1'b1;
       default: return 1'b0;
     endcase
   endfunction
@@ -242,7 +258,10 @@ package vcore_alu_pkg;
       VOP_WREDSUMU, VOP_WREDSUM, VOP_CPOP, VOP_FIRST,
       VOP_MUL, VOP_MULHU, VOP_MULHSU, VOP_MULH,
       VOP_MADD, VOP_NMSUB, VOP_MACC, VOP_NMSAC,
-      VOP_DIVU, VOP_DIV, VOP_REMU, VOP_REM: return 1'b1;
+      VOP_DIVU, VOP_DIV, VOP_REMU, VOP_REM,
+      VOP_FSGNJ, VOP_FSGNJN, VOP_FSGNJX, VOP_FCLASS,
+      VOP_FMIN, VOP_FMAX, VOP_FEQ, VOP_FLE, VOP_FLT,
+      VOP_FNE, VOP_FGT, VOP_FGE: return 1'b1;
       default: return 1'b0;
     endcase
   endfunction

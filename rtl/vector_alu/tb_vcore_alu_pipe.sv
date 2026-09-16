@@ -23,7 +23,8 @@ module tb_vcore_alu_pipe;
   task automatic execute_check(
     input logic [127:0] expected,
     input logic expected_sat,
-    input logic expected_illegal
+    input logic expected_illegal,
+    input logic [4:0] expected_fflags = 5'b0
   );
     @(negedge clk);
     req_valid = 1;
@@ -36,9 +37,11 @@ module tb_vcore_alu_pipe;
     #1;
     if (!rsp_valid || result !== expected ||
         rsp_meta.vxsat !== expected_sat ||
-        rsp_meta.illegal_op !== expected_illegal)
-      $fatal(1, "pipe mismatch: got=%h expected=%h sat=%b illegal=%b",
-             result, expected, rsp_meta.vxsat, rsp_meta.illegal_op);
+        rsp_meta.illegal_op !== expected_illegal ||
+        rsp_meta.fflags !== expected_fflags)
+      $fatal(1, "pipe mismatch: got=%h expected=%h sat=%b illegal=%b flags=%h",
+             result, expected, rsp_meta.vxsat, rsp_meta.illegal_op,
+             rsp_meta.fflags);
     @(posedge clk);
     #1;
     if (rsp_valid) $fatal(1, "response did not retire");
@@ -253,6 +256,55 @@ module tb_vcore_alu_pipe;
     execute_variable_check({2{64'hffff_ffff_ffff_fff2}}); // -14
     ctrl.op = VOP_REM;
     execute_variable_check({2{64'hffff_ffff_ffff_fffe}}); // -2
+
+    ctrl.sew = VSEW_32;
+    ctrl.vl = 4;
+    src2 = {4{32'h3f80_0000}}; // +1.0f
+    src1 = {4{32'h8000_0000}}; // negative sign
+    ctrl.op = VOP_FSGNJ;
+    execute_check({4{32'hbf80_0000}},0,0);
+    ctrl.op = VOP_FSGNJN;
+    execute_check({4{32'h3f80_0000}},0,0);
+    ctrl.op = VOP_FSGNJX;
+    execute_check({4{32'hbf80_0000}},0,0);
+    src2 = {32'h7fc0_0001,32'h7f80_0001,32'h8000_0000,32'h7f80_0000};
+    ctrl.op = VOP_FCLASS;
+    execute_check({32'h200,32'h100,32'h008,32'h080},0,0);
+
+    src2 = {4{32'h7fc0_0001}}; // quiet NaN
+    src1 = {4{32'h3f80_0000}};
+    ctrl.op = VOP_FMIN;
+    execute_check({4{32'h3f80_0000}},0,0);
+    ctrl.op = VOP_FEQ;
+    old_data = '0;
+    execute_check(128'b0,0,0);
+    ctrl.op = VOP_FNE;
+    execute_check(128'hf,0,0);
+    ctrl.op = VOP_FLE;
+    execute_check(128'b0,0,0,5'h10);
+    src2 = {4{32'h7f80_0001}}; // signaling NaN
+    ctrl.op = VOP_FMAX;
+    execute_check({4{32'h3f80_0000}},0,0,5'h10);
+    ctrl.op = VOP_FEQ;
+    execute_check(128'b0,0,0,5'h10);
+    src2 = {4{32'h0000_0000}};
+    src1 = {4{32'h8000_0000}};
+    ctrl.op = VOP_FMIN;
+    execute_check({4{32'h8000_0000}},0,0);
+    ctrl.op = VOP_FMAX;
+    execute_check(128'b0,0,0);
+    ctrl.op = VOP_FEQ;
+    execute_check(128'hf,0,0);
+    ctrl.op = VOP_FLT;
+    execute_check(128'b0,0,0);
+    ctrl.op = VOP_FEQ;
+    ctrl.vm = 0;
+    ctrl.vma = 0;
+    mask = 128'h5;
+    src2 = {32'h7f80_0001,32'h3f80_0000,
+            32'h7f80_0001,32'h3f80_0000};
+    src1 = {4{32'h3f80_0000}};
+    execute_check(128'h5,0,0); // masked-off sNaNs do not raise NV
 
     // Kill an operation after its first 64-bit phase.
     @(negedge clk);

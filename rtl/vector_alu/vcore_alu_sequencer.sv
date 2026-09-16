@@ -54,6 +54,7 @@ module vcore_alu_sequencer #(
                       5'(int'(decoded_q.vs1) + int'(beat_index_q));
     uop_o.vs2_addr = 5'(int'(decoded_q.vs2) + int'(beat_index_q));
     uop_o.read_vs1 = (decoded_q.form == VSRC_VV) &&
+                     (decoded_q.ctrl.op != VOP_FCLASS) &&
                      !vop_is_scalar_mask_reduce(decoded_q.ctrl.op) &&
                      (!vop_is_reduction(decoded_q.ctrl.op) || beat_index_q == 0) &&
                      (decoded_q.ctrl.op != VOP_INVALID);

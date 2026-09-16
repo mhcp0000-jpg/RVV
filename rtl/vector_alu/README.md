@@ -36,7 +36,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 | 필드 | 공급 원천 | 의미 |
 |---|---|---|
 | `inst[31:0]` | instruction | opcode, funct6, funct3, vm, vd, vs1/rs1/imm, vs2 |
-| `scalar[31:0]` | 정수 레지스터 읽기 | `.vx`의 x[rs1]. `.vi`는 `inst[19:15]`에서 복호화 |
+| `scalar[31:0]` | TOP의 정수/FP 레지스터 읽기 | `.vx`의 x[rs1] 또는 `.vf`의 raw FP32 f[rs1] 비트. `.vi`는 `inst[19:15]`에서 복호화 |
 | `sew[2:0]` | vtype.vsew | 0/1/2/3 = 8/16/32/64 |
 | `vlmul[2:0]` | vtype.vlmul | 000/001/010/011 = m1/m2/m4/m8, 111/110/101 = mf2/mf4/mf8 |
 | `vxrm[1:0]` | CSR vxrm | fixed point 평균·rounded shift·`vsmul`의 반올림 모드 |
@@ -47,7 +47,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 
 `v0`는 CSR이 아닙니다. TOP은 VRF의 v0에 대한 모든 writeback을 복제 FF에도 반영하고, v0를 갱신하는 앞선 명령이 남아 있으면 forwarding하거나 이 ALU에 다음 명령을 발행하기 전에 기다려야 합니다. ALU는 마스크를 얻기 위해 VRF의 읽기 포트를 추가 사용하지 않습니다. 한 명령의 모든 LMUL beat는 **동일한** `mask_snapshot`을 사용합니다.
 
-포화 연산의 `vxsat`은 `commit_o.vxsat`에서 beat별 펄스로 보고하므로 TOP이 sticky CSR에 OR합니다. TOP이 마지막 beat를 수락하면 architectural `vstart`를 0으로 정리합니다. FP 연산을 추가할 때는 `frm` 입력과 `fflags` 출력 계약도 필요합니다.
+포화 연산의 `vxsat`과 FP의 `fflags[4:0]`은 `commit_o`에서 beat별로 보고하므로 TOP이 sticky CSR에 OR합니다. 현재 FP32 부호·분류·min/max·비교 명령을 지원합니다. FP 산술 연산을 추가할 때는 `frm` 입력도 필요합니다. TOP이 마지막 beat를 수락하면 architectural `vstart`를 0으로 정리합니다.
 
 ## VRF 및 writeback 계약
 
@@ -56,7 +56,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 | 읽기 요청 | `vrf_read_valid_o && vrf_read_ready_i` | `addr`, `tag` 한 개. 응답은 요청 뒤 클록에 도착하고 `rsp_valid/rsp_ready`까지 유지되어야 함 |
 | 읽기 응답 | `vrf_read_rsp_valid_i && vrf_read_rsp_ready_o` | 해당 주소의 128비트 데이터. outstanding 읽기는 최대 1개 |
 | 쓰기 요청 | `vrf_write_valid_o && vrf_write_ready_i` | `vd_addr`, `tag`, 128비트 데이터 |
-| 완료 | `commit_valid_o && commit_ready_i` | beat별 `tag`, `last_beat`, `vxsat`, `illegal_op`; `vcpop.m`/`vfirst.m`은 `scalar_valid`, `scalar_rd`, `scalar_data` 포함 |
+| 완료 | `commit_valid_o && commit_ready_i` | beat별 `tag`, `last_beat`, `vxsat`, `fflags`, `illegal_op`; `vcpop.m`/`vfirst.m`은 `scalar_valid`, `scalar_rd`, `scalar_data` 포함 |
 
 일반 벡터 목적지의 기존 128비트 값은 보존 정책 때문에 읽습니다. scalar mask reduction은 VRF 목적지를 읽거나 쓰지 않습니다. 정수 reduction은 마지막 beat에서만 VRF에 씁니다. 비교 명령은 dense mask bit를 `vd` 레지스터의 하위 비트부터 갱신하며 LMUL의 다음 beat도 같은 mask destination 레지스터에 누적 기록합니다.
 
@@ -79,5 +79,6 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 - `vcore_alu_slice.sv`, `vcore_alu_pipe.sv`, `vcore_alu_reduce_step.sv`: 일반 요소 연산 및 반복 reduction/divider
 - `vcore_alu_wb.sv`, `vcore_alu_top.sv`: 쓰기와 TOP commit, 전체 연결
 - `tb_vcore_alu_pipe.sv`, `tb_vcore_alu_top.sv`: 독립 연산 및 1R1W 통합 테스트
+- `generate_checklist.py`, `verify_decode_table.py`, `tb_vcore_alu_decode_table.sv`: 공식 인코딩 280개 추적 및 decoder 수락/거부 대조
 
 시뮬레이션에 포함할 때는 **package를 먼저** 컴파일한 뒤 위 RTL, 마지막에 testbench를 컴파일합니다.
