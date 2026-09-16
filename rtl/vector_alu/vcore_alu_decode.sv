@@ -1,0 +1,125 @@
+module vcore_alu_decode #(
+  parameter int unsigned VLEN = 128
+) (
+  input  logic                               cmd_valid_i,
+  output logic                               cmd_ready_o,
+  input  vcore_alu_pkg::vcore_alu_cmd_t       cmd_i,
+  output logic                               decoded_valid_o,
+  input  logic                               decoded_ready_i,
+  output vcore_alu_pkg::vcore_alu_decoded_t  decoded_o
+);
+  import vcore_alu_pkg::*;
+
+  logic [2:0] funct3;
+  logic [5:0] funct6;
+  logic form_vv, form_vx, form_vi, form_valid;
+  logic operation_valid;
+  logic [3:0] beats;
+  int unsigned sew_bits, fraction_div, max_elements;
+
+  assign cmd_ready_o = decoded_ready_i;
+  assign decoded_valid_o = cmd_valid_i;
+  assign funct3 = cmd_i.inst[14:12];
+  assign funct6 = cmd_i.inst[31:26];
+  assign form_vv = (funct3 == 3'b000);
+  assign form_vx = (funct3 == 3'b100);
+  assign form_vi = (funct3 == 3'b011);
+  assign form_valid = form_vv || form_vx || form_vi;
+
+  always_comb begin
+    decoded_o = '0;
+    decoded_o.ctrl.op = VOP_INVALID;
+    decoded_o.ctrl.sew = cmd_i.sew;
+    decoded_o.ctrl.vm = cmd_i.inst[25];
+    decoded_o.ctrl.vta = cmd_i.vta;
+    decoded_o.ctrl.vma = cmd_i.vma;
+    decoded_o.ctrl.vl = cmd_i.vl;
+    decoded_o.ctrl.vstart = cmd_i.vstart;
+    decoded_o.ctrl.tag = cmd_i.tag;
+    decoded_o.scalar = cmd_i.scalar;
+    decoded_o.mask_snapshot = cmd_i.mask_snapshot;
+    decoded_o.vd = cmd_i.inst[11:7];
+    decoded_o.vs1 = cmd_i.inst[19:15];
+    decoded_o.vs2 = cmd_i.inst[24:20];
+    decoded_o.form = form_vv ? VSRC_VV : form_vx ? VSRC_VX : VSRC_VI;
+
+    // Integer/immediate forms handled by this execution cluster.
+    operation_valid = form_valid && (cmd_i.inst[6:0] == 7'h57);
+    case (funct6)
+      6'h00: decoded_o.ctrl.op = VOP_ADD;
+      6'h02: begin decoded_o.ctrl.op = VOP_SUB;   operation_valid &= !form_vi; end
+      6'h03: begin decoded_o.ctrl.op = VOP_RSUB;  operation_valid &= !form_vv; end
+      6'h04: begin decoded_o.ctrl.op = VOP_MINU;  operation_valid &= !form_vi; end
+      6'h05: begin decoded_o.ctrl.op = VOP_MIN;   operation_valid &= !form_vi; end
+      6'h06: begin decoded_o.ctrl.op = VOP_MAXU;  operation_valid &= !form_vi; end
+      6'h07: begin decoded_o.ctrl.op = VOP_MAX;   operation_valid &= !form_vi; end
+      6'h09: decoded_o.ctrl.op = VOP_AND;
+      6'h0a: decoded_o.ctrl.op = VOP_OR;
+      6'h0b: decoded_o.ctrl.op = VOP_XOR;
+      6'h17: begin
+        if (cmd_i.inst[25]) begin
+          decoded_o.ctrl.op = VOP_COPY_B;
+          operation_valid &= (cmd_i.inst[24:20] == 5'b0);
+        end else decoded_o.ctrl.op = VOP_MERGE;
+      end
+      6'h18: decoded_o.ctrl.op = VOP_EQ;
+      6'h19: decoded_o.ctrl.op = VOP_NE;
+      6'h1a: begin decoded_o.ctrl.op = VOP_LTU;   operation_valid &= !form_vi; end
+      6'h1b: begin decoded_o.ctrl.op = VOP_LT;    operation_valid &= !form_vi; end
+      6'h1c: decoded_o.ctrl.op = VOP_LEU;
+      6'h1d: decoded_o.ctrl.op = VOP_LE;
+      6'h1e: begin decoded_o.ctrl.op = VOP_GTU;   operation_valid &= !form_vv; end
+      6'h1f: begin decoded_o.ctrl.op = VOP_GT;    operation_valid &= !form_vv; end
+      6'h20: decoded_o.ctrl.op = VOP_SADDU;
+      6'h21: decoded_o.ctrl.op = VOP_SADD;
+      6'h22: begin decoded_o.ctrl.op = VOP_SSUBU; operation_valid &= !form_vi; end
+      6'h23: begin decoded_o.ctrl.op = VOP_SSUB;  operation_valid &= !form_vi; end
+      6'h25: decoded_o.ctrl.op = VOP_SLL;
+      6'h28: decoded_o.ctrl.op = VOP_SRL;
+      6'h29: decoded_o.ctrl.op = VOP_SRA;
+      default: operation_valid = 1'b0;
+    endcase
+
+    if (form_vi)
+      decoded_o.scalar = {{27{cmd_i.inst[19]}},cmd_i.inst[19:15]};
+
+    case (cmd_i.sew)
+      VSEW_8:  sew_bits = 8;
+      VSEW_16: sew_bits = 16;
+      VSEW_32: sew_bits = 32;
+      VSEW_64: sew_bits = 64;
+      default: sew_bits = 0;
+    endcase
+    beats = 4'd1;
+    fraction_div = 1;
+    case (cmd_i.vlmul)
+      3'b000: beats = 4'd1;
+      3'b001: beats = 4'd2;
+      3'b010: beats = 4'd4;
+      3'b011: beats = 4'd8;
+      3'b111: fraction_div = 2;
+      3'b110: fraction_div = 4;
+      3'b101: fraction_div = 8;
+      default: operation_valid = 1'b0;
+    endcase
+    decoded_o.beats = beats;
+    max_elements = (sew_bits == 0) ? 0 : ((VLEN / sew_bits) * int'(beats)) / fraction_div;
+    if (max_elements == 0 || int'(cmd_i.vl) > max_elements ||
+        int'(cmd_i.vstart) >= max_elements || cmd_i.vill)
+      operation_valid = 1'b0;
+    if (!cmd_i.inst[25] && decoded_o.vd == 5'd0 &&
+        !vop_is_compare(decoded_o.ctrl.op))
+      operation_valid = 1'b0;
+    if (beats > 1) begin
+      if ((!vop_is_compare(decoded_o.ctrl.op) &&
+           (int'(decoded_o.vd) % int'(beats)) != 0) ||
+          ((decoded_o.ctrl.op != VOP_COPY_B) &&
+           (int'(decoded_o.vs2) % int'(beats)) != 0) ||
+          (form_vv && (int'(decoded_o.vs1) % int'(beats)) != 0))
+        operation_valid = 1'b0;
+    end
+    decoded_o.illegal = !operation_valid;
+    if (!operation_valid) decoded_o.ctrl.op = VOP_INVALID;
+  end
+
+endmodule

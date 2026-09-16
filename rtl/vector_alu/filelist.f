@@ -1,0 +1,9 @@
+rtl/vector_alu/vcore_alu_pkg.sv
+rtl/vector_alu/vcore_alu_slice.sv
+rtl/vector_alu/vcore_alu_pipe.sv
+rtl/vector_alu/vcore_alu_decode.sv
+rtl/vector_alu/vcore_alu_issue_fifo.sv
+rtl/vector_alu/vcore_alu_sequencer.sv
+rtl/vector_alu/vcore_alu_vrf_request.sv
+rtl/vector_alu/vcore_alu_wb.sv
+rtl/vector_alu/vcore_alu_top.sv
