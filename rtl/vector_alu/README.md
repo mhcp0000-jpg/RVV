@@ -67,6 +67,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 인코딩은 공식 [RISC-V opcode 파일](https://raw.githubusercontent.com/riscv/riscv-opcodes/f5befa291a2562f3194921265b7f5ac5681bc8b0/extensions/rv_v)에 고정했습니다. ALU로 분류한 280개 중 현재 구현 수는 [진행표](RVV_ALU_PROGRESS.md)를 참조하세요. 지원하지 않는 명령/형식, `vill`, 유효하지 않은 `vlmul`/`sew`, `vl>VLMAX`, 예약된 register group alignment는 `illegal_op`로 보고하고 VRF 쓰기를 건너뜁니다. 비교와 mask 논리 목적지는 일반 데이터 그룹과 달리 `vd` 정렬을 요구하지 않습니다.
 
 **1GHz는 설계 목표이며 달성 판정이 아닙니다.** 반복 reduction/divider는 한 클록 조합 연산량을 제한했습니다. 현재 일반 slice에는 64비트 곱셈과 가변 shift/rounding 경로가 있으므로 타이밍 위험이 남아 있습니다. 표준셀 라이브러리 기반 합성, 배치·배선, STA 결과가 없으며 FP FMA도 아직 구현 전입니다. 2클록 결과 요구는 일반 요소 연산에 적용하고, divide/reduction에는 가변 지연을 허용합니다.
+타이밍 경계와 필요한 signoff 입력은 [TIMING_1GHZ.md](TIMING_1GHZ.md)에 정리했습니다.
 
 ## 파일
 
