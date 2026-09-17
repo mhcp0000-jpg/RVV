@@ -90,6 +90,10 @@ NEW_FORMS = {
     "vwmacc": {"vv", "vx"},
     "vwmaccus": {"vx"},
     "vwmaccsu": {"vv", "vx"},
+    "vnsrl": {"wv", "wx", "wi"},
+    "vnsra": {"wv", "wx", "wi"},
+    "vnclipu": {"wv", "wx", "wi"},
+    "vnclip": {"wv", "wx", "wi"},
 }
 
 
@@ -175,6 +179,8 @@ def main() -> None:
                       suffix in {"vv", "vx", "wv", "wx"}) or
                     (base in {"vwmulu", "vwmulsu", "vwmul", "vwmaccu",
                               "vwmacc", "vwmaccus", "vwmaccsu"} and
+                     suffix in NEW_FORMS[base]) or
+                    (base in {"vnsrl", "vnsra", "vnclipu", "vnclip"} and
                      suffix in NEW_FORMS[base]) else ""
             ),
             "spec_corner_test": prior.get("spec_corner_test") or (
@@ -202,7 +208,9 @@ def main() -> None:
                     "vwaddu", "vwadd", "vwsubu", "vwsub"} else
                 "m1 all lanes; signed/unsigned corners; MAC old vd" if base in {
                     "vwmulu", "vwmulsu", "vwmul", "vwmaccu", "vwmacc",
-                    "vwmaccus", "vwmaccsu"} else ""
+                    "vwmaccus", "vwmaccsu"} else
+                "1R wide source pair, m2/mf2, overlap, vxrm, masked vxsat" if base in {
+                    "vnsrl", "vnsra", "vnclipu", "vnclip"} else ""
             ),
             "notes": prior.get("notes", ""),
         }

@@ -39,7 +39,8 @@ module vcore_alu_top #(
   vcore_alu_uop_t uop_data;
   logic exec_valid, exec_ready;
   vcore_alu_ctrl_t exec_ctrl;
-  logic [VLEN-1:0] exec_src1, exec_src2, exec_dst_old, exec_mask;
+  logic [VLEN-1:0] exec_src1, exec_dst_old, exec_mask;
+  logic [2*VLEN-1:0] exec_src2;
   logic result_valid, result_ready;
   logic [VLEN-1:0] result_data;
   vcore_alu_rsp_t result_meta;

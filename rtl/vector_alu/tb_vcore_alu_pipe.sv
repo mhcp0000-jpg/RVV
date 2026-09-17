@@ -15,7 +15,8 @@ module tb_vcore_alu_pipe;
   vcore_alu_pipe dut (
     .clk_i(clk), .rst_ni(rst_n), .flush_i(flush),
     .req_valid_i(req_valid), .req_ready_o(req_ready), .ctrl_i(ctrl),
-    .src1_i(src1), .src2_i(src2), .dst_old_i(old_data), .mask_i(mask),
+    .src1_i(src1), .src2_i({128'b0,src2}),
+    .dst_old_i(old_data), .mask_i(mask),
     .rsp_valid_o(rsp_valid), .rsp_ready_i(rsp_ready),
     .result_o(result), .rsp_meta_o(rsp_meta)
   );

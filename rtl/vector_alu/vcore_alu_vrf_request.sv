@@ -19,7 +19,7 @@ module vcore_alu_vrf_request #(
   input  logic                               exec_ready_i,
   output vcore_alu_pkg::vcore_alu_ctrl_t     exec_ctrl_o,
   output logic [VLEN-1:0]                    exec_src1_o,
-  output logic [VLEN-1:0]                    exec_src2_o,
+  output logic [2*VLEN-1:0]                  exec_src2_o,
   output logic [VLEN-1:0]                    exec_dst_old_o,
   output logic [VLEN-1:0]                    exec_mask_o
 );
@@ -27,12 +27,14 @@ module vcore_alu_vrf_request #(
   typedef enum logic [3:0] {
     VRF_IDLE,
     VRF_SRC2_REQ, VRF_SRC2_RSP,
+    VRF_SRC2_HI_REQ, VRF_SRC2_HI_RSP,
     VRF_SRC1_REQ, VRF_SRC1_RSP,
     VRF_DST_REQ, VRF_DST_RSP, VRF_EXEC
   } state_e;
   state_e state_q;
   vcore_alu_uop_t uop_q;
-  logic [VLEN-1:0] src1_q, src2_q, dst_old_q, mask_q;
+  logic [VLEN-1:0] src1_q, dst_old_q, mask_q;
+  logic [2*VLEN-1:0] src2_q;
 
   function automatic logic [VLEN-1:0] broadcast_scalar(
     input logic [31:0] scalar,
@@ -56,9 +58,11 @@ module vcore_alu_vrf_request #(
 
   assign uop_ready_o = (state_q == VRF_IDLE) && !flush_i;
   assign vrf_req_valid_o = ((state_q == VRF_SRC2_REQ) ||
+                            (state_q == VRF_SRC2_HI_REQ) ||
                             (state_q == VRF_SRC1_REQ) ||
                             (state_q == VRF_DST_REQ)) && !flush_i;
   assign vrf_rsp_ready_o = ((state_q == VRF_SRC2_RSP) ||
+                            (state_q == VRF_SRC2_HI_RSP) ||
                             (state_q == VRF_SRC1_RSP) ||
                             (state_q == VRF_DST_RSP)) && !flush_i;
   assign exec_valid_o = (state_q == VRF_EXEC) && !flush_i;
@@ -74,6 +78,7 @@ module vcore_alu_vrf_request #(
     vrf_req_o.tag = uop_q.ctrl.tag;
     case (state_q)
       VRF_SRC2_REQ: vrf_req_o.addr = uop_q.vs2_addr;
+      VRF_SRC2_HI_REQ: vrf_req_o.addr = uop_q.vs2_addr_hi;
       VRF_SRC1_REQ: vrf_req_o.addr = uop_q.vs1_addr;
       VRF_DST_REQ:  vrf_req_o.addr = uop_q.vd_addr;
       default:      vrf_req_o.addr = '0;
@@ -93,6 +98,7 @@ module vcore_alu_vrf_request #(
         VRF_IDLE: if (uop_valid_i && uop_ready_o) begin
           uop_q <= uop_i;
           mask_q <= uop_i.mask_snapshot;
+          src2_q <= '0;
           if (uop_i.ctrl.op == VOP_INVALID) state_q <= VRF_EXEC;
           else if (uop_i.read_vs2) state_q <= VRF_SRC2_REQ;
           else if (uop_i.read_vs1) state_q <= VRF_SRC1_REQ;
@@ -102,7 +108,16 @@ module vcore_alu_vrf_request #(
         VRF_SRC2_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
           state_q <= VRF_SRC2_RSP;
         VRF_SRC2_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
-          src2_q <= vrf_rsp_data_i;
+          src2_q[VLEN-1:0] <= vrf_rsp_data_i;
+          if (uop_q.read_vs2_hi) state_q <= VRF_SRC2_HI_REQ;
+          else if (uop_q.read_vs1) state_q <= VRF_SRC1_REQ;
+          else if (uop_q.read_vd) state_q <= VRF_DST_REQ;
+          else state_q <= VRF_EXEC;
+        end
+        VRF_SRC2_HI_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
+          state_q <= VRF_SRC2_HI_RSP;
+        VRF_SRC2_HI_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
+          src2_q[2*VLEN-1:VLEN] <= vrf_rsp_data_i;
           if (uop_q.read_vs1) state_q <= VRF_SRC1_REQ;
           else if (uop_q.read_vd) state_q <= VRF_DST_REQ;
           else state_q <= VRF_EXEC;

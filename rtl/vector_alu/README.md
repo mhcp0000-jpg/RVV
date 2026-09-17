@@ -30,6 +30,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 - `vzext.vf2/vf4/vf8`와 `vsext.vf2/vf4/vf8`는 source EEW=`SEW/factor`, source EMUL=`LMUL/factor`로 주소를 계산합니다. 여러 destination beat가 한 source 레지스터를 공유할 수 있으며, 서로 다른 EEW의 source/destination 그룹이 겹치면 source EMUL≥1이고 두 그룹의 최고 번호 레지스터가 같을 때만 허용합니다. source EMUL이 fractional인 overlap은 거부합니다.
 - `vwaddu/vwadd/vwsubu/vwsub`의 `.vv/.vx/.wv/.wx`는 source SEW의 두 배를 destination EEW로 사용합니다. 정수 LMUL m1/m2/m4의 destination 그룹은 각각 2/4/8개 레지스터이고, m8은 EMUL 제한으로 거부합니다. `.wv/.wx`의 `vs2`는 이미 넓은 EEW로 읽습니다. 서로 다른 EEW 그룹이 합법적으로 겹치면 해당 명령의 비활성 mask 및 tail 결과는 agnostic으로 처리합니다.
 - `vwmulu/vwmulsu/vwmul/vwmaccu/vwmacc/vwmaccus/vwmaccsu`의 13개 형식도 같은 widening beat·VRF 주소 경로를 사용합니다. 명령별 signed/unsigned 조합으로 source를 2×SEW로 확장한 뒤, 기존 정수 multiply/MAC 연산 경로에서 하위 2×SEW 결과를 사용합니다.
+- `vnsrl/vnsra/vnclipu/vnclip`의 `.wv/.wx/.wi`는 source EEW=`2×SEW`, source EMUL=`2×LMUL`입니다. m1/m2/m4는 destination beat마다 VRF에서 넓은 `vs2` 레지스터 두 개를 순차로 읽으며, `.wv`는 추가로 `vs1`, 모든 형식은 old `vd`를 읽습니다. mf2/mf4/mf8은 source가 한 레지스터 안에 들어갑니다. `.wi`의 5비트 shift amount는 zero extension입니다. `vnclip*`는 `vxrm` 반올림 뒤 포화하고 활성 lane의 포화만 `vxsat`에 반영합니다. source/destination EEW가 다른 합법적인 low-end overlap에서는 inactive mask 및 tail을 agnostic으로 처리합니다.
 - FIFO 깊이는 `ISSUE_DEPTH` 파라미터로 정합니다(최소 2). 데이터 폭은 현재 패키지의 mask snapshot과 연결되어 **VLEN=128 고정**이며, 다른 VLEN은 재설계가 필요합니다.
 
 ## TOP 입력 계약
@@ -80,7 +81,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 - `vcore_alu_issue_fifo.sv`: ready/valid 3-entry 기본 FIFO
 - `vcore_alu_sequencer.sv`: LMUL register beat 전개
 - `vcore_alu_vrf_request.sv`: 1R VRF 순차 요청 및 scalar broadcast
-- `vcore_alu_slice.sv`, `vcore_alu_pipe.sv`, `vcore_alu_reduce_step.sv`: 일반 요소 연산 및 반복 reduction/divider
+- `vcore_alu_slice.sv`, `vcore_alu_narrow_slice.sv`, `vcore_alu_pipe.sv`, `vcore_alu_reduce_step.sv`: 일반/축소 요소 연산 및 반복 reduction/divider
 - `vcore_alu_wb.sv`, `vcore_alu_top.sv`: 쓰기와 TOP commit, 전체 연결
 - `tb_vcore_alu_pipe.sv`, `tb_vcore_alu_top.sv`: 독립 연산 및 1R1W 통합 테스트
 - `generate_checklist.py`, `verify_decode_table.py`, `tb_vcore_alu_decode_table.sv`: 공식 인코딩 280개 추적 및 decoder 수락/거부 대조

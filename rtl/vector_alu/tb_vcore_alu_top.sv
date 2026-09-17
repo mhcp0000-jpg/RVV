@@ -24,6 +24,7 @@ module tb_vcore_alu_top;
   logic [31:0] last_scalar_data = '0;
   logic [4:0] last_scalar_rd = '0;
   logic [4:0] last_fflags = '0;
+  logic last_vxsat = 0;
 
   vcore_alu_top dut (
     .clk_i(clk), .rst_ni(rst_n), .flush_i(flush),
@@ -51,6 +52,7 @@ module tb_vcore_alu_top;
       last_scalar_data <= '0;
       last_scalar_rd <= '0;
       last_fflags <= '0;
+      last_vxsat <= 0;
     end else begin
       if (rd_rsp_valid && rd_rsp_ready) rd_rsp_valid <= 0;
       if (rd_valid && rd_ready) begin
@@ -72,6 +74,7 @@ module tb_vcore_alu_top;
         end
         commit_count <= commit_count + 1;
         last_fflags <= commit_data.fflags;
+        last_vxsat <= commit_data.vxsat;
         if (commit_data.last_beat) last_seen <= 1;
       end
     end
@@ -610,6 +613,191 @@ module tb_vcore_alu_top;
         $fatal(1,"widen mul/MAC encoding sweep incomplete: commits=%0d writes=%0d",
                wanted,write_count);
     end
+
+    // All 12 narrowing shift/clip encodings. One destination register
+    // consumes two wide source registers through the single VRF read port.
+    begin : narrow_sweep
+      int wanted, reads_before;
+      logic [31:0] raw_source;
+      logic [31:0] shifted_unsigned;
+      int signed shifted_signed;
+      logic [15:0] expected_value;
+      wanted = 140;
+      mem[8] = {32'hffff_ffff,32'h0001_ffff,32'h0000_0003,32'h0000_0001};
+      mem[9] = {32'h8000_0000,32'h0000_ffff,32'hffff_0000,32'h0002_0000};
+      mem[4] = {8{16'd1}};
+      cmd.sew = VSEW_16;
+      cmd.vlmul = 3'b000;
+      cmd.vl = 8;
+      cmd.vstart = 0;
+      cmd.vxrm = 2'b10; // truncate for a simple independent reference
+      cmd.scalar = 32'd1;
+      cmd.mask_snapshot = '1;
+      cmd.vta = 0;
+      cmd.vma = 0;
+      for (int opcode=32'h2c; opcode<=32'h2f; opcode++) begin
+        for (int form=0; form<3; form++) begin
+          mem[20] = '0;
+          reads_before = read_count;
+          cmd.inst = {6'(opcode),1'b1,5'd8,
+                      (form==0 ? 5'd4 : form==1 ? 5'd3 : 5'd1),
+                      (form==0 ? 3'b000 : form==1 ? 3'b100 : 3'b011),
+                      5'd20,7'h57};
+          cmd.tag = 16'(32'hb0 + (opcode-32'h2c)*3 + form);
+          send_command();
+          wanted++;
+          await_commits(wanted);
+          if (read_count != reads_before + (form==0 ? 4 : 3))
+            $fatal(1,"narrow 1R source read count mismatch opcode=%h form=%0d",opcode,form);
+          if (last_vxsat !== (opcode>=32'h2e))
+            $fatal(1,"narrow saturation status mismatch opcode=%h form=%0d",opcode,form);
+          for (int lane_index=0; lane_index<8; lane_index++) begin
+            raw_source = mem[8+lane_index/4][(lane_index%4)*32 +: 32];
+            shifted_unsigned = raw_source >> 1;
+            shifted_signed = $signed(raw_source) >>> 1;
+            case (opcode)
+              32'h2c: expected_value = shifted_unsigned[15:0];
+              32'h2d: expected_value = 16'(shifted_signed);
+              32'h2e: expected_value = (shifted_unsigned > 32'hffff) ?
+                                        16'hffff : shifted_unsigned[15:0];
+              default: expected_value = (shifted_signed > 32767) ? 16'h7fff :
+                                        (shifted_signed < -32768) ? 16'h8000 :
+                                        16'(shifted_signed);
+            endcase
+            if (mem[20][lane_index*16 +: 16] !== expected_value)
+              $fatal(1,"narrow opcode=%h form=%0d lane=%0d got=%h expected=%h",
+                     opcode,form,lane_index,
+                     mem[20][lane_index*16 +: 16],expected_value);
+          end
+        end
+      end
+      if (wanted != 152 || write_count != 129 || illegal_count != 5)
+        $fatal(1,"narrow encoding sweep incomplete");
+    end
+
+    // LMUL=2 maps destination beats v20/v21 to source pairs v8/v9,
+    // v10/v11. Fractional LMUL reads only one wide source register.
+    for (int i=0; i<4; i++) begin
+      mem[8+i] = '0;
+      for (int j=0; j<4; j++)
+        mem[8+i][j*32 +: 32] = 32'(2*(4*i+j+1));
+    end
+    cmd.inst = {6'h2c,1'b1,5'd8,5'd3,3'b100,5'd20,7'h57};
+    cmd.sew = VSEW_16;
+    cmd.vlmul = 3'b001;
+    cmd.vl = 16;
+    cmd.scalar = 32'd1;
+    cmd.tag = 16'hc0;
+    send_command();
+    await_commits(154);
+    for (int i=0; i<16; i++)
+      if (mem[20+i/8][(i%8)*16 +: 16] !== 16'(i+1))
+        $fatal(1,"narrow m2 source pair/address mismatch lane=%0d",i);
+
+    mem[8] = {32'd8,32'd6,32'd4,32'd2};
+    mem[24] = {8{16'h1234}};
+    cmd.inst = {6'h2c,1'b1,5'd8,5'd3,3'b100,5'd24,7'h57};
+    cmd.vlmul = 3'b111;
+    cmd.vl = 4;
+    cmd.tag = 16'hc1;
+    send_command();
+    await_commits(155);
+    if (mem[24] !== {{4{16'h1234}},16'd4,16'd3,16'd2,16'd1})
+      $fatal(1,"narrow fractional LMUL mismatch %h",mem[24]);
+
+    // Low-end overlap is permitted, with mask and tail forced agnostic.
+    mem[8] = {32'd16,32'd14,32'd12,32'd10};
+    mem[9] = {32'd24,32'd22,32'd20,32'd18};
+    cmd.inst = {6'h2c,1'b0,5'd8,5'd3,3'b100,5'd8,7'h57};
+    cmd.vlmul = 3'b000;
+    cmd.vl = 3;
+    cmd.mask_snapshot = 128'h5;
+    cmd.vta = 0;
+    cmd.vma = 0;
+    cmd.tag = 16'hc2;
+    send_command();
+    await_commits(156);
+    if (mem[8] !== {{5{16'hffff}},16'd7,16'hffff,16'd5})
+      $fatal(1,"narrow legal overlap/forced agnostic mismatch %h",mem[8]);
+
+    cmd.inst = {6'h2c,1'b1,5'd8,5'd3,3'b100,5'd9,7'h57};
+    cmd.tag = 16'hc3;
+    send_command();
+    await_commits(157);
+    cmd.inst = {6'h2c,1'b1,5'd8,5'd3,3'b100,5'd16,7'h57};
+    cmd.vlmul = 3'b011;
+    cmd.vl = 128;
+    cmd.tag = 16'hc4;
+    send_command();
+    await_commits(158);
+    if (illegal_count != 7 || write_count != 133)
+      $fatal(1,"narrow overlap/EMUL legality mismatch illegal=%0d writes=%0d",
+             illegal_count,write_count);
+
+    // RNU, RNE, RDN, ROD on a discarded half bit.
+    mem[8] = {4{32'd5}};
+    mem[9] = {4{32'd5}};
+    cmd.inst = {6'h2e,1'b1,5'd8,5'd1,3'b011,5'd20,7'h57};
+    cmd.vlmul = 3'b000;
+    cmd.vl = 8;
+    cmd.mask_snapshot = '1;
+    for (int mode=0; mode<4; mode++) begin
+      cmd.vxrm = 2'(mode);
+      cmd.tag = 16'(32'hc5+mode);
+      send_command();
+      await_commits(159+mode);
+      for (int i=0; i<8; i++)
+        if (mem[20][i*16 +: 16] !== 16'((mode==0 || mode==3) ? 3 : 2))
+          $fatal(1,"narrow vxrm mode=%0d lane=%0d got=%h",mode,i,
+                 mem[20][i*16 +: 16]);
+      if (last_vxsat) $fatal(1,"narrow vxrm falsely set vxsat");
+    end
+
+    // A saturated lane that is masked off must not set vxsat.
+    mem[8] = {32'd0,32'd0,32'd0,32'h0001_ffff};
+    mem[9] = '0;
+    mem[20] = {8{16'h1234}};
+    cmd.inst = {6'h2e,1'b0,5'd8,5'd1,3'b011,5'd20,7'h57};
+    cmd.vxrm = 2'b10;
+    cmd.mask_snapshot = 128'hfe;
+    cmd.vta = 0;
+    cmd.vma = 0;
+    cmd.tag = 16'hc9;
+    send_command();
+    await_commits(163);
+    if (last_vxsat || mem[20][15:0] !== 16'h1234)
+      $fatal(1,"masked saturated lane changed vxsat/data");
+
+    // The same two 64-bit compute stages cover SEW=8 and SEW=32.
+    for (int i=0; i<2; i++) begin
+      mem[8+i] = '0;
+      for (int j=0; j<8; j++)
+        mem[8+i][j*16 +: 16] = 16'(2*(8*i+j+1));
+    end
+    cmd.inst = {6'h2c,1'b1,5'd8,5'd3,3'b100,5'd20,7'h57};
+    cmd.sew = VSEW_8;
+    cmd.vl = 16;
+    cmd.scalar = 32'd1;
+    cmd.mask_snapshot = '1;
+    cmd.tag = 16'hca;
+    send_command();
+    await_commits(164);
+    for (int i=0; i<16; i++)
+      if (mem[20][i*8 +: 8] !== 8'(i+1))
+        $fatal(1,"narrow SEW8 mismatch lane=%0d",i);
+
+    mem[8] = {64'h0000_0001_0000_0000,64'hffff_ffff_ffff_fffb};
+    mem[9] = {64'd7,64'hffff_fffe_0000_0000};
+    cmd.inst = {6'h2f,1'b1,5'd8,5'd1,3'b011,5'd20,7'h57};
+    cmd.sew = VSEW_32;
+    cmd.vl = 4;
+    cmd.vxrm = 2'b10;
+    cmd.tag = 16'hcb;
+    send_command();
+    await_commits(165);
+    if (mem[20] !== {32'd3,32'h8000_0000,32'h7fff_ffff,32'hffff_fffd} ||
+        !last_vxsat)
+      $fatal(1,"narrow SEW32 signed saturation mismatch %h",mem[20]);
 
     $display("tb_vcore_alu_top PASS");
     $finish;

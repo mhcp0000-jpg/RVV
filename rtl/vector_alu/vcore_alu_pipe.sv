@@ -9,7 +9,7 @@ module vcore_alu_pipe #(
   output logic                           req_ready_o,
   input  vcore_alu_pkg::vcore_alu_ctrl_t ctrl_i,
   input  logic [VLEN-1:0]                src1_i,
-  input  logic [VLEN-1:0]                src2_i,
+  input  logic [2*VLEN-1:0]              src2_i,
   input  logic [VLEN-1:0]                dst_old_i,
   input  logic [VLEN-1:0]                mask_i,
   output logic                           rsp_valid_o,
@@ -30,6 +30,7 @@ module vcore_alu_pipe #(
 
   vcore_alu_ctrl_t ctrl_q;
   logic [SLICE_W-1:0] src1_high_q, src2_high_q;
+  logic [VLEN-1:0] narrow_high_q;
   logic [VLEN-1:0] dst_old_q, mask_q;
   logic [SLICE_W-1:0] low_data_q;
   logic [VLEN-1:0] low_mask_dst_q;
@@ -67,6 +68,10 @@ module vcore_alu_pipe #(
   logic [VLEN-1:0] slice_mask_dst;
   logic slice_vxsat;
   logic [4:0] slice_fflags;
+  logic [SLICE_W-1:0] regular_data, narrow_data;
+  logic [VLEN-1:0] regular_mask_dst, narrow_wide_src;
+  logic regular_vxsat, narrow_vxsat;
+  logic [4:0] regular_fflags;
   logic rsp_slot_ready;
   logic req_fire, finish_fire;
 
@@ -162,21 +167,21 @@ module vcore_alu_pipe #(
   assign rsp_meta_o = rsp_meta_q;
   always_comb begin
     prepared_src1 = src1_i;
-    prepared_src2 = src2_i;
+    prepared_src2 = src2_i[VLEN-1:0];
     widen_ctrl = ctrl_i;
     widen_ctrl.sew = ctrl_i.sew + 3'd1;
     widen_ctrl.op = (vop_is_widen_mul(ctrl_i.op) ?
                      vop_widen_mul_vs1_signed(ctrl_i.op) :
                      vop_widen_signed(ctrl_i.op)) ? VOP_SEXT2 : VOP_ZEXT2;
     if (vop_is_extension(ctrl_i.op))
-      prepared_src2 = expand_extension(src2_i,ctrl_i);
+      prepared_src2 = expand_extension(src2_i[VLEN-1:0],ctrl_i);
     else if (vop_is_widen_integer(ctrl_i.op)) begin
       prepared_src1 = expand_extension(src1_i,widen_ctrl);
       widen_ctrl.op = (vop_is_widen_mul(ctrl_i.op) ?
                        vop_widen_mul_vs2_signed(ctrl_i.op) :
                        vop_widen_signed(ctrl_i.op)) ? VOP_SEXT2 : VOP_ZEXT2;
       if (!vop_widen_vs2_wide(ctrl_i.op))
-        prepared_src2 = expand_extension(src2_i,widen_ctrl);
+        prepared_src2 = expand_extension(src2_i[VLEN-1:0],widen_ctrl);
     end
   end
 
@@ -213,11 +218,24 @@ module vcore_alu_pipe #(
     .mask_i        (slice_mask),
     .high_half_i   (phase_q == PHASE_HIGH),
     .ctrl_i        (slice_ctrl),
-    .data_o        (slice_data),
-    .mask_dst_o    (slice_mask_dst),
-    .vxsat_o       (slice_vxsat),
-    .fflags_o      (slice_fflags)
+    .data_o        (regular_data),
+    .mask_dst_o    (regular_mask_dst),
+    .vxsat_o       (regular_vxsat),
+    .fflags_o      (regular_fflags)
   );
+
+  assign narrow_wide_src = (phase_q == PHASE_LOW) ?
+                           src2_i[VLEN-1:0] : narrow_high_q;
+  vcore_alu_narrow_slice #(.VLEN(VLEN)) u_narrow_slice (
+    .wide_src_i(narrow_wide_src), .shift_src_i(slice_src1),
+    .old_data_i(slice_old), .mask_i(slice_mask),
+    .high_half_i(phase_q == PHASE_HIGH), .ctrl_i(slice_ctrl),
+    .data_o(narrow_data), .vxsat_o(narrow_vxsat)
+  );
+  assign slice_data = vop_is_narrow(slice_ctrl.op) ? narrow_data : regular_data;
+  assign slice_mask_dst = regular_mask_dst;
+  assign slice_vxsat = vop_is_narrow(slice_ctrl.op) ? narrow_vxsat : regular_vxsat;
+  assign slice_fflags = vop_is_narrow(slice_ctrl.op) ? '0 : regular_fflags;
 
   always_comb begin
     case (ctrl_q.sew)
@@ -325,6 +343,7 @@ module vcore_alu_pipe #(
       ctrl_q <= '0;
       src1_high_q <= '0;
       src2_high_q <= '0;
+      narrow_high_q <= '0;
       dst_old_q <= '0;
       mask_q <= '0;
       low_data_q <= '0;
@@ -362,6 +381,7 @@ module vcore_alu_pipe #(
         ctrl_q <= ctrl_i;
         src1_high_q <= prepared_src1[VLEN-1:SLICE_W];
         src2_high_q <= prepared_src2[VLEN-1:SLICE_W];
+        narrow_high_q <= src2_i[2*VLEN-1:VLEN];
         dst_old_q <= dst_old_i;
         mask_q <= mask_i;
         if (!vop_is_reduction(ctrl_i.op)) begin
@@ -371,21 +391,22 @@ module vcore_alu_pipe #(
           low_fflags_q <= slice_fflags;
         end
         illegal_q <= !vop_supported(ctrl_i.op) || !vsew_supported(ctrl_i.sew) ||
-                     (vop_is_widen_integer(ctrl_i.op) && ctrl_i.sew > VSEW_32);
+                     ((vop_is_widen_integer(ctrl_i.op) ||
+                       vop_is_narrow(ctrl_i.op)) && ctrl_i.sew > VSEW_32);
         if (vop_is_reduction(ctrl_i.op)) begin
-          reduction_src_q <= src2_i;
+          reduction_src_q <= src2_i[VLEN-1:0];
           reduction_index_q <= '0;
           if (ctrl_i.first_beat)
             reduction_acc_q <= reduction_seed(src1_i,ctrl_i);
           phase_q <= PHASE_REDUCE;
         end else if (vop_is_scalar_mask_reduce(ctrl_i.op)) begin
-          reduction_src_q <= src2_i;
+          reduction_src_q <= src2_i[VLEN-1:0];
           mask_chunk_q <= '0;
           scalar_acc_q <= (ctrl_i.op == VOP_FIRST) ? 32'hffff_ffff : 32'd0;
           phase_q <= PHASE_MASK_REDUCE;
         end else if (vop_is_divide(ctrl_i.op)) begin
           div_src1_q <= src1_i;
-          div_src2_q <= src2_i;
+          div_src2_q <= src2_i[VLEN-1:0];
           div_result_q <= dst_old_i;
           div_index_q <= '0;
           phase_q <= PHASE_DIV_PREP;

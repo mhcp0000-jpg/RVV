@@ -59,12 +59,15 @@ module vcore_alu_sequencer #(
                          (vop_is_widen_integer(decoded_q.ctrl.op) ?
                           int'(beat_index_q)/2 : int'(beat_index_q)));
     uop_o.vs2_addr = 5'(int'(decoded_q.vs2) +
-                          (vop_is_extension(decoded_q.ctrl.op) ?
+                          (vop_is_narrow(decoded_q.ctrl.op) ?
+                           (decoded_q.narrow_pair ? 2*int'(beat_index_q) : 0) :
+                           vop_is_extension(decoded_q.ctrl.op) ?
                            int'(beat_index_q)/extension_factor :
                            (vop_is_widen_integer(decoded_q.ctrl.op) &&
                             !vop_widen_vs2_wide(decoded_q.ctrl.op)) ?
                            int'(beat_index_q)/2 :
                            int'(beat_index_q)));
+    uop_o.vs2_addr_hi = uop_o.vs2_addr + 5'd1;
     uop_o.read_vs1 = (decoded_q.form == VSRC_VV) &&
                      !vop_is_extension(decoded_q.ctrl.op) &&
                      (decoded_q.ctrl.op != VOP_FCLASS) &&
@@ -73,6 +76,8 @@ module vcore_alu_sequencer #(
                      (decoded_q.ctrl.op != VOP_INVALID);
     uop_o.read_vs2 = (decoded_q.ctrl.op != VOP_COPY_B) &&
                      (decoded_q.ctrl.op != VOP_INVALID);
+    uop_o.read_vs2_hi = decoded_q.narrow_pair &&
+                        (decoded_q.ctrl.op != VOP_INVALID);
     uop_o.read_vd = !vop_is_scalar_mask_reduce(decoded_q.ctrl.op) &&
                     (decoded_q.ctrl.op != VOP_INVALID);
     uop_o.beat_index = beat_index_q;

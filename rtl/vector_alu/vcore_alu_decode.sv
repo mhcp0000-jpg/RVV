@@ -19,6 +19,7 @@ module vcore_alu_decode #(
   int unsigned extension_factor, source_group_beats;
   int unsigned vd_begin, vd_end, vs2_begin, vs2_end;
   int unsigned vs1_begin, vs1_end, dest_group_beats, vs2_group_beats;
+  int unsigned narrow_source_group_beats;
 
   assign cmd_ready_o = decoded_ready_i;
   assign decoded_valid_o = cmd_valid_i;
@@ -99,6 +100,10 @@ module vcore_alu_decode #(
       6'h29: decoded_o.ctrl.op = VOP_SRA;
       6'h2a: decoded_o.ctrl.op = VOP_SSRL;
       6'h2b: decoded_o.ctrl.op = VOP_SSRA;
+      6'h2c: decoded_o.ctrl.op = VOP_NSRL;
+      6'h2d: decoded_o.ctrl.op = VOP_NSRA;
+      6'h2e: decoded_o.ctrl.op = VOP_NCLIPU;
+      6'h2f: decoded_o.ctrl.op = VOP_NCLIP;
       6'h30: begin decoded_o.ctrl.op = VOP_WREDSUMU;
         operation_valid &= (funct3 == 3'b000) && (cmd_i.sew <= VSEW_32); end
       6'h31: begin decoded_o.ctrl.op = VOP_WREDSUM;
@@ -210,7 +215,9 @@ module vcore_alu_decode #(
     end else operation_valid = 1'b0;
 
     if (form_vi)
-      decoded_o.scalar = {{27{cmd_i.inst[19]}},cmd_i.inst[19:15]};
+      decoded_o.scalar = vop_is_narrow(decoded_o.ctrl.op) ?
+                         {27'b0,cmd_i.inst[19:15]} :
+                         {{27{cmd_i.inst[19]}},cmd_i.inst[19:15]};
 
     case (cmd_i.sew)
       VSEW_8:  sew_bits = 8;
@@ -237,6 +244,8 @@ module vcore_alu_decode #(
     dest_group_beats = (fraction_div == 1) ? 2*int'(beats) : 1;
     if (vop_is_widen_integer(decoded_o.ctrl.op))
       decoded_o.beats = 4'(dest_group_beats);
+    decoded_o.narrow_pair = vop_is_narrow(decoded_o.ctrl.op) &&
+                            (fraction_div == 1);
     max_elements = (sew_bits == 0) ? 0 : ((VLEN / sew_bits) * int'(beats)) / fraction_div;
     if (max_elements == 0 || int'(cmd_i.vl) > max_elements || cmd_i.vill)
       operation_valid = 1'b0;
@@ -294,6 +303,28 @@ module vcore_alu_decode #(
           (vs2_begin <= vs1_end) && (vs1_begin <= vs2_end))
         operation_valid = 1'b0;
     end
+    narrow_source_group_beats = (fraction_div == 1) ?
+                                2*int'(beats) : 1;
+    if (vop_is_narrow(decoded_o.ctrl.op)) begin
+      vd_end = vd_begin + int'(beats) - 1;
+      vs2_end = vs2_begin + narrow_source_group_beats - 1;
+      vs1_begin = int'(decoded_o.vs1);
+      vs1_end = vs1_begin + int'(beats) - 1;
+      if (sew_bits > 32 || narrow_source_group_beats > 8 ||
+          vd_end >= 32 || vs2_end >= 32 ||
+          (form_vv && vs1_end >= 32) ||
+          (vs2_begin % narrow_source_group_beats) != 0)
+        operation_valid = 1'b0;
+      if ((vd_begin <= vs2_end) && (vs2_begin <= vd_end)) begin
+        if (vd_begin != vs2_begin)
+          operation_valid = 1'b0;
+        decoded_o.ctrl.vta = 1'b1;
+        decoded_o.ctrl.vma = 1'b1;
+      end
+      if (form_vv && (vs1_begin <= vs2_end) &&
+          (vs2_begin <= vs1_end))
+        operation_valid = 1'b0;
+    end
     if ((vop_is_reduction(decoded_o.ctrl.op) ||
          vop_is_scalar_mask_reduce(decoded_o.ctrl.op)) && cmd_i.vstart != 0)
       operation_valid = 1'b0;
@@ -311,6 +342,7 @@ module vcore_alu_decode #(
            (int'(decoded_o.vd) % int'(beats)) != 0) ||
           ((decoded_o.ctrl.op != VOP_COPY_B) &&
            !vop_is_widen_integer(decoded_o.ctrl.op) &&
+           !vop_is_narrow(decoded_o.ctrl.op) &&
            !vop_is_extension(decoded_o.ctrl.op) &&
            !vop_is_mask_logic(decoded_o.ctrl.op) &&
            !vop_is_scalar_mask_reduce(decoded_o.ctrl.op) &&

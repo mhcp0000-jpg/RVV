@@ -115,6 +115,10 @@ package vcore_alu_pkg;
     VOP_WMACC    = 8'd100,
     VOP_WMACCUS  = 8'd101,
     VOP_WMACCSU  = 8'd102,
+    VOP_NSRL     = 8'd103,
+    VOP_NSRA     = 8'd104,
+    VOP_NCLIPU   = 8'd105,
+    VOP_NCLIP    = 8'd106,
     VOP_INVALID  = 8'hff
   } vop_e;
 
@@ -179,6 +183,7 @@ package vcore_alu_pkg;
     logic [4:0]     vs1;
     logic [4:0]     vs2;
     logic [3:0]     beats;      // LMUL integer beats, 1 for fractional LMUL
+    logic           narrow_pair; // source EEW=2*SEW spans two regs per beat
     logic           illegal;
   } vcore_alu_decoded_t;
 
@@ -190,8 +195,10 @@ package vcore_alu_pkg;
     logic [4:0]     vd_addr;
     logic [4:0]     vs1_addr;
     logic [4:0]     vs2_addr;
+    logic [4:0]     vs2_addr_hi;
     logic           read_vs1;
     logic           read_vs2;
+    logic           read_vs2_hi;
     logic           read_vd;
     logic [2:0]     beat_index;
   } vcore_alu_uop_t;
@@ -307,6 +314,11 @@ package vcore_alu_pkg;
     return vop_is_widen_addsub(op) || vop_is_widen_mul(op);
   endfunction
 
+  function automatic logic vop_is_narrow(input logic [7:0] op);
+    return (op == VOP_NSRL) || (op == VOP_NSRA) ||
+           (op == VOP_NCLIPU) || (op == VOP_NCLIP);
+  endfunction
+
   function automatic logic vop_widen_mul_vs2_signed(input logic [7:0] op);
     return (op == VOP_WMULSU) || (op == VOP_WMUL) ||
            (op == VOP_WMACC) || (op == VOP_WMACCUS);
@@ -363,7 +375,8 @@ package vcore_alu_pkg;
       VOP_WADDU, VOP_WADD, VOP_WSUBU, VOP_WSUB,
       VOP_WADDU_W, VOP_WADD_W, VOP_WSUBU_W, VOP_WSUB_W,
       VOP_WMULU, VOP_WMULSU, VOP_WMUL,
-      VOP_WMACCU, VOP_WMACC, VOP_WMACCUS, VOP_WMACCSU:
+      VOP_WMACCU, VOP_WMACC, VOP_WMACCUS, VOP_WMACCSU,
+      VOP_NSRL, VOP_NSRA, VOP_NCLIPU, VOP_NCLIP:
         return 1'b1;
       default: return 1'b0;
     endcase

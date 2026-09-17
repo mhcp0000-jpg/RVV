@@ -1,5 +1,6 @@
 rtl/vector_alu/vcore_alu_pkg.sv
 rtl/vector_alu/vcore_alu_slice.sv
+rtl/vector_alu/vcore_alu_narrow_slice.sv
 rtl/vector_alu/vcore_alu_reduce_step.sv
 rtl/vector_alu/vcore_alu_pipe.sv
 rtl/vector_alu/vcore_alu_decode.sv

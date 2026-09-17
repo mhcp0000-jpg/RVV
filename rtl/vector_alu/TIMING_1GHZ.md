@@ -15,6 +15,7 @@
 | 정수 확장 `vzext/vsext` | source sub-register 선택 후 64비트씩 확장 | 2 compute 클록 + VRF/WB | 입력의 128비트 정렬 mux와 lane sign-extension mux |
 | widening add/sub | narrow source를 2배 EEW로 확장해 64비트씩 add/sub | 2 compute 클록/beat + VRF/WB | 입력 정렬·확장 mux와 SEW64 adder |
 | widening multiply/MAC | narrow source 두 개를 확장해 공통 곱셈 경로에서 계산 | 2 compute 클록/beat + VRF/WB | source 정렬·확장 mux, 64비트 곱셈, 누산 add |
+| narrowing shift/clip | wide source 128비트를 한 클록에 좁은 destination 64비트로 계산 | 2 compute 클록/beat + VRF/WB | wide 가변 shift, `vxrm` 반올림, 포화 compare/mux |
 | FP FMA | 아직 미구현 | 미정 | 2클록 달성 가능 여부도 미검증 |
 
 연산기의 **2 compute 클록**과 명령의 전체 지연은 다릅니다. 1R1W VRF에서
@@ -44,6 +45,9 @@ WB 후 다음 beat로 넘어가므로, 명령 전체가 2클록 안에 끝나지
 7. multiply/MAC는 signed·unsigned·mixed 결과 선택을 하나의 곱셈식으로
    합쳤습니다. 이 RTL 변화만으로 물리적으로 곱셈기 하나로 공유되었거나
    1ns에 들어온다고 판정할 수 없으며, 합성 netlist와 STA로 확인합니다.
+8. narrowing clip은 64비트 가변 shift, 반올림, 포화 비교가 한 compute
+   클록에 이어집니다. 1ns를 넘으면 이 경로를 분할하고 compute 지연을
+   재정의해야 합니다. 1R VRF의 추가 source read도 전체 명령 지연에 포함합니다.
 
 ## 사인오프에 필요한 입력과 산출물
 
