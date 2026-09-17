@@ -1,0 +1,9 @@
+vcore_vld_pkg.sv
+vcore_vld_decode.sv
+vcore_vld_issue_fifo.sv
+vcore_vld_sequencer.sv
+vcore_vld_memreq.sv
+vcore_vld_assemble.sv
+vcore_vld_pipe.sv
+vcore_vld_wb.sv
+vcore_vld_top.sv

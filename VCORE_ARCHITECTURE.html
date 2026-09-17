@@ -1,0 +1,1230 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vector_Core RTL Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --ground:#f4f6f8;
+    --surface:#ffffff;
+    --surface-2:#eceff3;
+    --ink:#14191f;
+    --ink-2:#3d4854;
+    --muted:#69737f;
+    --rule:#d8dee5;
+    --rule-strong:#b9c2cc;
+    --accent:#0d6a72;
+    --accent-soft:#d9eced;
+    --warn:#9d4a1c;
+    --warn-soft:#f6e6da;
+    --ok:#2f6b3a;
+    --code-bg:#eef1f4;
+    --shadow:0 1px 2px rgba(20,25,31,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0e1216;
+      --surface:#151b21;
+      --surface-2:#1c242c;
+      --ink:#e7ebef;
+      --ink-2:#c2cad3;
+      --muted:#8d99a6;
+      --rule:#28313a;
+      --rule-strong:#3a4550;
+      --accent:#4fc2c9;
+      --accent-soft:#123336;
+      --warn:#e09566;
+      --warn-soft:#331f13;
+      --ok:#7dc48c;
+      --code-bg:#1a2129;
+      --shadow:0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0e1216;
+    --surface:#151b21;
+    --surface-2:#1c242c;
+    --ink:#e7ebef;
+    --ink-2:#c2cad3;
+    --muted:#8d99a6;
+    --rule:#28313a;
+    --rule-strong:#3a4550;
+    --accent:#4fc2c9;
+    --accent-soft:#123336;
+    --warn:#e09566;
+    --warn-soft:#331f13;
+    --ok:#7dc48c;
+    --code-bg:#1a2129;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:"IBM Plex Sans KR","IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:15px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+  }
+  code,kbd,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  .shell{display:grid;grid-template-columns:minmax(0,1fr);max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:0}
+  @media (min-width:1000px){
+    .shell{grid-template-columns:232px minmax(0,1fr);gap:44px;padding-inline:28px}
+  }
+
+  /* ---- masthead ---- */
+  .masthead{border-bottom:1px solid var(--rule-strong);padding-block:40px 26px;margin-bottom:34px}
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 14px
+  }
+  h1{
+    font-family:"IBM Plex Sans","IBM Plex Sans KR",sans-serif;
+    font-size:clamp(28px,5vw,40px);line-height:1.15;letter-spacing:-.018em;
+    font-weight:600;margin:0 0 14px;text-wrap:balance
+  }
+  .standfirst{font-size:16.5px;color:var(--ink-2);max-width:62ch;margin:0 0 24px}
+  .factstrip{display:flex;flex-wrap:wrap;gap:8px 10px;margin:0;padding:0;list-style:none}
+  .factstrip li{
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.02em;
+    background:var(--surface);border:1px solid var(--rule);border-radius:2px;
+    padding:4px 9px;color:var(--ink-2)
+  }
+  .factstrip li b{color:var(--ink);font-weight:600}
+
+  /* ---- toc rail ---- */
+  .rail{display:none}
+  @media (min-width:1000px){
+    .rail{
+      display:block;align-self:start;position:sticky;
+      top:calc(env(safe-area-inset-top, 0px) + 24px);
+      padding-block:44px 0;font-size:13px
+    }
+    .rail h2{
+      font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:500
+    }
+    .rail ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+    .rail a{
+      display:flex;gap:9px;color:var(--ink-2);text-decoration:none;
+      padding:3px 0;line-height:1.4
+    }
+    .rail a:hover{color:var(--accent)}
+    .rail .n{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);padding-top:2px}
+  }
+
+  main{min-width:0;padding-bottom:80px}
+
+  section{margin-bottom:56px;scroll-margin-top:24px}
+  h2{
+    font-family:"IBM Plex Sans","IBM Plex Sans KR",sans-serif;
+    font-size:clamp(21px,3vw,26px);line-height:1.22;letter-spacing:-.012em;font-weight:600;
+    margin:0 0 6px;text-wrap:balance;
+    display:flex;gap:12px;align-items:baseline
+  }
+  h2 .snum{
+    font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:500;
+    color:var(--accent);flex:none;padding-top:2px
+  }
+  .lede{color:var(--muted);margin:0 0 22px;max-width:66ch;font-size:14.5px}
+  h3{
+    font-size:16.5px;font-weight:600;margin:32px 0 8px;letter-spacing:-.006em;
+    padding-bottom:5px;border-bottom:1px solid var(--rule)
+  }
+  h4{font-size:14.5px;font-weight:600;margin:22px 0 6px;color:var(--ink)}
+  p{margin:0 0 14px;max-width:70ch}
+  ul,ol{margin:0 0 14px;padding-left:20px;max-width:70ch}
+  li{margin-bottom:5px}
+  a{color:var(--accent)}
+
+  code{
+    background:var(--code-bg);border-radius:2px;padding:1px 5px;font-size:.88em;
+    color:var(--ink);border:1px solid transparent
+  }
+
+  /* ---- tables ---- */
+  .tw{overflow-x:auto;margin:0 0 20px;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+  thead th{
+    background:var(--surface-2);font-weight:600;font-size:11.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink-2);white-space:nowrap
+  }
+  tbody tr:last-child td{border-bottom:none}
+  td.mono,th.mono,table.mono td:first-child{font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+  .tw caption{
+    caption-side:bottom;text-align:left;padding:8px 12px;font-size:12.5px;color:var(--muted);
+    border-top:1px solid var(--rule)
+  }
+
+  /* ---- figures ---- */
+  figure{margin:24px 0;padding:0}
+  .figbox{
+    border:1px solid var(--rule);border-radius:3px;background:var(--surface);
+    padding:18px 16px;overflow-x:auto
+  }
+  figure svg{display:block;max-width:100%;height:auto;margin:0 auto;color:var(--ink)}
+  figcaption{
+    font-size:12.5px;color:var(--muted);margin-top:9px;line-height:1.6;max-width:72ch
+  }
+  figcaption b{color:var(--ink-2);font-weight:600}
+
+  /* ---- callouts ---- */
+  .note{
+    border-left:2px solid var(--accent);background:var(--accent-soft);
+    padding:13px 16px;margin:20px 0;font-size:14px
+  }
+  .note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+  .note .tag{
+    display:block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;
+    text-transform:uppercase;margin-bottom:5px;color:var(--accent);font-weight:600
+  }
+  .note.warn .tag{color:var(--warn)}
+  .note p:last-child{margin-bottom:0}
+
+  /* ---- status pills ---- */
+  .pill{
+    display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+    letter-spacing:.04em;padding:1px 7px;border-radius:2px;white-space:nowrap;
+    border:1px solid currentColor;font-weight:500
+  }
+  .pill.done{color:var(--ok)}
+  .pill.part{color:var(--accent)}
+  .pill.todo{color:var(--warn)}
+
+  /* ---- module cards ---- */
+  .modlist{display:flex;flex-direction:column;gap:0;margin:20px 0;border:1px solid var(--rule);border-radius:3px;background:var(--surface);overflow:hidden}
+  .mod{display:grid;grid-template-columns:minmax(0,1fr);gap:2px 16px;padding:13px 16px;border-bottom:1px solid var(--rule)}
+  .mod:last-child{border-bottom:none}
+  @media (min-width:680px){.mod{grid-template-columns:228px minmax(0,1fr)}}
+  .mod .nm{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent);font-weight:500;line-height:1.5;padding-top:2px}
+  .mod .ds{font-size:13.5px;color:var(--ink-2);margin:0}
+  .mod .ds em{color:var(--ink);font-style:normal;font-weight:600}
+
+  pre{
+    background:var(--code-bg);border:1px solid var(--rule);border-radius:3px;
+    padding:13px 15px;overflow-x:auto;font-family:"IBM Plex Mono",monospace;
+    font-size:12.5px;line-height:1.62;margin:0 0 18px
+  }
+  pre code{background:none;padding:0;border:none;font-size:inherit}
+
+  .kv{display:grid;gap:0;margin:0 0 20px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);overflow:hidden}
+  .kv>div{display:grid;grid-template-columns:minmax(0,1fr);padding:10px 14px;border-bottom:1px solid var(--rule);font-size:13.5px}
+  @media (min-width:600px){.kv>div{grid-template-columns:200px minmax(0,1fr);gap:14px}}
+  .kv>div:last-child{border-bottom:none}
+  .kv dt,.kv .k{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent)}
+  .kv dd,.kv .v{margin:0;color:var(--ink-2)}
+
+  footer.doc{border-top:1px solid var(--rule-strong);padding-block:22px 40px;color:var(--muted);font-size:12.5px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="목차">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#s1"><span class="n">1</span><span>전체 구조와 현황</span></a></li>
+      <li><a href="#s2"><span class="n">2</span><span>세 클러스터의 공통 골격</span></a></li>
+      <li><a href="#s3"><span class="n">3</span><span>TOP &harr; 클러스터 계약</span></a></li>
+      <li><a href="#s4"><span class="n">4</span><span>공통 정책 체인</span></a></li>
+      <li><a href="#s5"><span class="n">5</span><span>ALU 클러스터</span></a></li>
+      <li><a href="#s6"><span class="n">6</span><span>Permutation 클러스터</span></a></li>
+      <li><a href="#s7"><span class="n">7</span><span>Load 클러스터</span></a></li>
+      <li><a href="#s8"><span class="n">8</span><span>TOP 통합 설계</span></a></li>
+      <li><a href="#s9"><span class="n">9</span><span>Rocket 연결</span></a></li>
+      <li><a href="#s10"><span class="n">10</span><span>남은 작업과 주의사항</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="masthead">
+      <p class="eyebrow">RVV 1.0 &middot; VLEN=128 &middot; Zve64f_Zvl128b</p>
+      <h1>Vector_Core RTL 레퍼런스</h1>
+      <p class="standfirst">ALU &middot; Permutation &middot; Load 세 실행 클러스터의 모듈별 구조와, 이들을 하나의 벡터 코어로 묶는 TOP의 설계 계약을 정리한 문서입니다. 각 절의 내용은 저장소의 RTL에서 직접 확인한 것이며, 구현되지 않은 부분은 그렇다고 표시했습니다.</p>
+      <ul class="factstrip">
+        <li>VLEN <b>128</b></li>
+        <li>VRF <b>32 &times; 128b, 1R1W</b></li>
+        <li>클러스터 <b>3 / 4</b> (store 미구현)</li>
+        <li>ALU 인코딩 <b>237 / 280</b></li>
+        <li>Perm 인코딩 <b>34 / 34</b></li>
+        <li>Load 범위 <b>unit-stride + vlm.v</b></li>
+      </ul>
+    </header>
+    <section id="s1">
+      <h2><span class="snum">01</span><span>전체 구조와 현황</span></h2>
+      <p class="lede">Vector_Core는 <em>하나의 1R1W VRF를 공유하는 여러 실행 클러스터</em>라는 구조입니다. 각 클러스터는 자기 명령군을 끝까지 책임지고, TOP은 명령을 어디로 보낼지 정하고 VRF 포트를 중재하고 CSR을 모읍니다.</p>
+
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 960 520" role="img" aria-label="Vector_Core 블록도: 호스트 코어에서 dispatch를 거쳐 ALU, Permutation, Load, Store 클러스터로 명령이 내려가고, 네 클러스터가 하나의 1R1W VRF 아비터를 공유하며, Load 클러스터만 별도의 태그 메모리 포트를 통해 L1 데이터 캐시에 접근한다">
+            <defs>
+              <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 1 L 9 5 L 0 9 z" fill="currentColor"/>
+              </marker>
+              <marker id="ara1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 1 L 9 5 L 0 9 z" fill="var(--accent)"/>
+              </marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="12" fill="currentColor">
+
+              <!-- host -->
+              <rect x="40" y="14" width="880" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="480" y="33" text-anchor="middle" font-size="12.5">Host core (Rocket)</text>
+              <text x="480" y="47" text-anchor="middle" font-size="10.5" opacity=".72">inst[31:0] &middot; x[rs1] / f[rs1] &middot; vtype(vsew,vlmul,vta,vma,vill) &middot; vl &middot; vstart &middot; vxrm &middot; frm</text>
+              <line x1="480" y1="54" x2="480" y2="82" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar1)"/>
+
+              <!-- TOP band -->
+              <rect x="40" y="84" width="880" height="72" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+              <line x1="316" y1="84" x2="316" y2="156" stroke="currentColor" stroke-width="1" opacity=".5"/>
+              <line x1="644" y1="84" x2="644" y2="156" stroke="currentColor" stroke-width="1" opacity=".5"/>
+              <text x="178" y="107" text-anchor="middle" font-size="11.5">v0 shadow FF</text>
+              <text x="178" y="123" text-anchor="middle" font-size="10" opacity=".72">128b, VRF와 동시 갱신</text>
+              <text x="178" y="139" text-anchor="middle" font-size="10" opacity=".72">→ mask_snapshot</text>
+              <text x="480" y="107" text-anchor="middle" font-size="11.5">vcore_dispatch</text>
+              <text x="480" y="123" text-anchor="middle" font-size="10" opacity=".72">opcode / funct6 / funct3 / vs1 사전 복호 &middot; 클러스터 선택</text>
+              <text x="480" y="139" text-anchor="middle" font-size="10" opacity=".72">hazard scoreboard (레지스터 32 busy bit)</text>
+              <text x="782" y="107" text-anchor="middle" font-size="11.5">CSR &middot; retire</text>
+              <text x="782" y="123" text-anchor="middle" font-size="10" opacity=".72">vxsat / fflags sticky OR</text>
+              <text x="782" y="139" text-anchor="middle" font-size="10" opacity=".72">illegal_op / mem_error → trap</text>
+              <text x="52" y="76" font-size="9.5" opacity=".6" letter-spacing=".08em">TOP 제어 (미구현)</text>
+
+              <!-- cmd / commit arrows -->
+              <line x1="112" y1="156" x2="112" y2="194" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar1)"/>
+              <line x1="164" y1="194" x2="164" y2="156" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar1)"/>
+              <text x="106" y="180" text-anchor="end" font-size="9.5" opacity=".8">cmd_i</text>
+              <text x="170" y="180" font-size="9.5" opacity=".8">commit_o</text>
+              <line x1="324" y1="156" x2="324" y2="194" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar1)"/>
+              <line x1="376" y1="194" x2="376" y2="156" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar1)"/>
+              <line x1="536" y1="156" x2="536" y2="194" stroke="var(--accent)" stroke-width="1.4" marker-end="url(#ara1)"/>
+              <line x1="588" y1="194" x2="588" y2="156" stroke="var(--accent)" stroke-width="1.4" marker-end="url(#ara1)"/>
+              <line x1="748" y1="156" x2="748" y2="194" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>
+              <line x1="800" y1="194" x2="800" y2="156" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>
+
+              <!-- clusters -->
+              <rect x="40" y="196" width="196" height="116" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="138" y="220" text-anchor="middle" font-size="12">vcore_alu_top</text>
+              <text x="138" y="240" text-anchor="middle" font-size="10" opacity=".72">OP-V 정수/FP/고정소수점</text>
+              <text x="138" y="255" text-anchor="middle" font-size="9" opacity=".72">reduction &middot; divide &middot; widen/narrow</text>
+              <text x="138" y="276" text-anchor="middle" font-size="10.5">237 / 280 인코딩</text>
+              <text x="138" y="297" text-anchor="middle" font-size="9.5" opacity=".62">VRF 읽기 최대 4회/beat</text>
+
+              <rect x="252" y="196" width="196" height="116" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="350" y="220" text-anchor="middle" font-size="12">vcore_perm_top</text>
+              <text x="350" y="240" text-anchor="middle" font-size="10" opacity=".72">gather &middot; slide &middot; compress</text>
+              <text x="350" y="255" text-anchor="middle" font-size="10" opacity=".72">merge &middot; mv &middot; viota/vid/vmsbf</text>
+              <text x="350" y="276" text-anchor="middle" font-size="10.5">34 / 34 인코딩</text>
+              <text x="350" y="297" text-anchor="middle" font-size="9.5" opacity=".62">vs2 EMUL 그룹 버퍼</text>
+
+              <rect x="464" y="196" width="196" height="116" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
+              <text x="562" y="220" text-anchor="middle" font-size="12" fill="var(--accent)">vcore_vld_top</text>
+              <text x="562" y="240" text-anchor="middle" font-size="10" opacity=".8">vle8/16/32/64.v &middot; vlm.v</text>
+              <text x="562" y="255" text-anchor="middle" font-size="10" opacity=".8">다중 미결 메모리 요청</text>
+              <text x="562" y="276" text-anchor="middle" font-size="10.5">unit-stride 범위</text>
+              <text x="562" y="297" text-anchor="middle" font-size="9.5" opacity=".7">VRF 읽기 0~1회/beat</text>
+
+              <rect x="676" y="196" width="196" height="116" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="5 4" opacity=".55"/>
+              <text x="774" y="220" text-anchor="middle" font-size="12" opacity=".7">vcore_vst_top</text>
+              <text x="774" y="245" text-anchor="middle" font-size="10" opacity=".6">vse*.v &middot; vsm.v</text>
+              <text x="774" y="272" text-anchor="middle" font-size="10.5" opacity=".6">미구현</text>
+
+              <!-- VRF port lines -->
+              <line x1="108" y1="312" x2="108" y2="362" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar1)"/>
+              <line x1="320" y1="312" x2="320" y2="362" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar1)"/>
+              <line x1="532" y1="312" x2="532" y2="362" stroke="var(--accent)" stroke-width="1.4" marker-end="url(#ara1)"/>
+              <text x="114" y="332" font-size="9.5" opacity=".8">1R + 1W</text>
+
+              <!-- memory path -->
+              <polyline points="600,312 600,338 774,338 774,362" fill="none" stroke="var(--accent)" stroke-width="1.4" marker-end="url(#ara1)"/>
+              <text x="690" y="332" text-anchor="middle" font-size="9.5" fill="var(--accent)">req/rsp + tag</text>
+
+              <!-- arbiter + VRF -->
+              <rect x="40" y="364" width="620" height="42" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="350" y="381" text-anchor="middle" font-size="11.5">VRF 아비터 (미구현)</text>
+              <text x="350" y="396" text-anchor="middle" font-size="10" opacity=".72">읽기 응답이 소비될 때까지 grant 유지 &middot; 클러스터당 outstanding 1</text>
+              <line x1="350" y1="406" x2="350" y2="434" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar1)"/>
+              <rect x="40" y="436" width="620" height="42" rx="3" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.2"/>
+              <text x="350" y="462" text-anchor="middle" font-size="11.5">VRF 32 &times; 128b, 1R1W (외부, 미구현)</text>
+
+              <rect x="676" y="364" width="196" height="42" rx="3" fill="none" stroke="var(--accent)" stroke-width="1.2"/>
+              <text x="774" y="381" text-anchor="middle" font-size="11" fill="var(--accent)">벡터 메모리 포트</text>
+              <text x="774" y="396" text-anchor="middle" font-size="9.5" opacity=".72">coalesce + tag 할당 (미구현)</text>
+              <line x1="774" y1="406" x2="774" y2="434" stroke="var(--accent)" stroke-width="1.2" marker-end="url(#ara1)"/>
+              <rect x="676" y="436" width="196" height="42" rx="3" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.2"/>
+              <text x="774" y="462" text-anchor="middle" font-size="11">L1 D$ / TileLink</text>
+
+              <!-- v0 shadow feedback -->
+              <polyline points="40,457 18,457 18,112 38,112" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="4 3" marker-end="url(#ar1)"/>
+              <text x="44" y="502" font-size="10" opacity=".8">vd == v0 쓰기를 shadow FF에도 동시 반영 — 이 경로가 없으면 mask_snapshot이 한 명령 늦는다</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>그림 1.</b> 굵은 실선은 구현된 RTL, 파선은 아직 없는 블록입니다. 네 클러스터가 VRF 포트 하나를 공유하므로 아비터가 필요하고, Load 클러스터만 VRF 외에 외부 메모리 경로를 하나 더 가집니다. TOP 제어 블록(dispatch / v0 shadow / CSR·retire)과 VRF 본체, 메모리 포트는 아직 작성되지 않았습니다.</figcaption>
+      </figure>
+
+      <h3>구현 현황</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>블록</th><th>파일</th><th>범위</th><th>검증</th><th>상태</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>ALU 클러스터</b></td>
+              <td class="mono">rtl/vector_alu/</td>
+              <td>OP-V 280개 중 237개 decode+execute</td>
+              <td>TOP 통합 테스트 90/280</td>
+              <td><span class="pill part">진행 중</span></td>
+            </tr>
+            <tr>
+              <td><b>Permutation 클러스터</b></td>
+              <td class="mono">rtl/vector_permutation/</td>
+              <td>RVV 16장 permutation 34개 전부</td>
+              <td>golden ref 3,018 / directed 59, 전부 통과</td>
+              <td><span class="pill done">완료</span></td>
+            </tr>
+            <tr>
+              <td><b>Load 클러스터</b></td>
+              <td class="mono">rtl/vector_load/</td>
+              <td>unit-stride <code>vle8/16/32/64.v</code> + <code>vlm.v</code></td>
+              <td>golden ref 2,433 / directed 15, 전부 통과</td>
+              <td><span class="pill done">범위 내 완료</span></td>
+            </tr>
+            <tr>
+              <td>Store 클러스터</td><td>&mdash;</td>
+              <td><code>vse*.v</code>, <code>vsm.v</code></td><td>&mdash;</td>
+              <td><span class="pill todo">미구현</span></td>
+            </tr>
+            <tr>
+              <td>VRF + 아비터</td><td>&mdash;</td>
+              <td>32 &times; 128b 1R1W, 클러스터 4개 중재</td><td>&mdash;</td>
+              <td><span class="pill todo">미구현</span></td>
+            </tr>
+            <tr>
+              <td>TOP (dispatch / CSR / retire)</td><td>&mdash;</td>
+              <td>§8 참조</td><td>&mdash;</td>
+              <td><span class="pill todo">미구현</span></td>
+            </tr>
+            <tr>
+              <td>strided / indexed / segment / whole-reg / fault-only-first</td>
+              <td>&mdash;</td>
+              <td>메모리 명령 나머지</td><td>&mdash;</td>
+              <td><span class="pill todo">미구현 (현재 illegal 보고)</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <caption>각 클러스터의 TB는 자기 힘으로 돌아가는 독립 테스트벤치이며, VRF·메모리·호스트를 모델로 대체합니다. 따라서 위 검증 수치는 클러스터 단위 수치이고, 통합 수준 검증은 TOP이 생긴 다음의 일입니다.</caption>
+      </div>
+    </section>
+    <section id="s2">
+      <h2><span class="snum">02</span><span>세 클러스터의 공통 골격</span></h2>
+      <p class="lede">세 클러스터는 같은 6단 골격을 씁니다. 다른 곳은 정확히 한 단계 &mdash; <em>오퍼랜드를 어디서 어떻게 모아오는가</em> &mdash; 뿐이고, 그 앞뒤는 파일 이름의 접두사만 다릅니다.</p>
+
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 900 250" role="img" aria-label="세 클러스터가 공유하는 6단 파이프라인. decode, issue FIFO, sequencer, 오퍼랜드 수집 단계, pipe, wb 순서이고 네 번째 단계만 클러스터마다 다르다. ALU는 VRF에서 vs2/vs1/vd를 순차로 읽고, Permutation은 vs2 EMUL 그룹 전체를 미리 읽고, Load는 외부 메모리에 다중 미결 요청을 낸다">
+            <defs>
+              <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="currentColor"/></marker>
+              <marker id="ara2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--accent)"/></marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="11.5" fill="currentColor">
+              <!-- beat ack loop -->
+              <polyline points="794,36 794,16 368,16 368,34" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="4 3" marker-end="url(#ar2)"/>
+              <text x="581" y="12" text-anchor="middle" font-size="9.5" opacity=".78">beat_done — last_beat까지 sequencer가 다음 beat를 재발행</text>
+
+              <!-- stage row -->
+              <rect x="20" y="36" width="128" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="84" y="56" text-anchor="middle">decode</text>
+              <text x="84" y="71" text-anchor="middle" font-size="9.5" opacity=".7">legality</text>
+              <line x1="148" y1="59" x2="160" y2="59" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+              <rect x="162" y="36" width="128" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="226" y="56" text-anchor="middle">issue_fifo</text>
+              <text x="226" y="71" text-anchor="middle" font-size="9.5" opacity=".7">DEPTH=3</text>
+              <line x1="290" y1="59" x2="302" y2="59" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+              <rect x="304" y="36" width="128" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="368" y="56" text-anchor="middle">sequencer</text>
+              <text x="368" y="71" text-anchor="middle" font-size="9.5" opacity=".7">LMUL → beat</text>
+              <line x1="432" y1="59" x2="444" y2="59" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+              <rect x="446" y="36" width="128" height="46" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" stroke-dasharray="5 3"/>
+              <text x="510" y="56" text-anchor="middle" fill="var(--accent)">단계 4</text>
+              <text x="510" y="71" text-anchor="middle" font-size="9.5" opacity=".8">오퍼랜드 수집</text>
+              <line x1="574" y1="59" x2="586" y2="59" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+              <rect x="588" y="36" width="128" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="652" y="56" text-anchor="middle">pipe</text>
+              <text x="652" y="71" text-anchor="middle" font-size="9.5" opacity=".7">1클록 래치</text>
+              <line x1="716" y1="59" x2="728" y2="59" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+              <rect x="730" y="36" width="128" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="794" y="56" text-anchor="middle">wb</text>
+              <text x="794" y="71" text-anchor="middle" font-size="9.5" opacity=".7">VRF 1W + commit</text>
+
+              <!-- converge -->
+              <polyline points="160,132 160,112 502,112 502,84" fill="none" stroke="currentColor" stroke-width="1.1" marker-end="url(#ar2)"/>
+              <polyline points="450,132 450,112 510,112" fill="none" stroke="currentColor" stroke-width="1.1"/>
+              <polyline points="740,132 740,112 518,112 518,84" fill="none" stroke="var(--accent)" stroke-width="1.3" marker-end="url(#ara2)"/>
+
+              <!-- variants -->
+              <rect x="20" y="132" width="280" height="92" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="160" y="152" text-anchor="middle" font-size="11.5">alu_vrf_request</text>
+              <text x="160" y="171" text-anchor="middle" font-size="9.5" opacity=".75">vs2 → (vs2+1) → vs1 → old vd</text>
+              <text x="160" y="187" text-anchor="middle" font-size="9.5" opacity=".75">1R 포트에 순차 요청, 최대 4회</text>
+              <text x="160" y="209" text-anchor="middle" font-size="9.5" opacity=".75">scalar는 broadcast로 합성</text>
+
+              <rect x="310" y="132" width="280" height="92" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="450" y="152" text-anchor="middle" font-size="11.5">perm_vrf_request</text>
+              <text x="450" y="171" text-anchor="middle" font-size="9.5" opacity=".75">beat 0에 vs2 EMUL 그룹 전체 preload</text>
+              <text x="450" y="187" text-anchor="middle" font-size="9.5" opacity=".75">(최대 8개 레지스터 → 1024b 버퍼)</text>
+              <text x="450" y="209" text-anchor="middle" font-size="9.5" opacity=".75">이후 beat는 vs1 / old vd만</text>
+
+              <rect x="600" y="132" width="280" height="92" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
+              <text x="740" y="152" text-anchor="middle" font-size="11.5" fill="var(--accent)">vld_memreq</text>
+              <text x="740" y="171" text-anchor="middle" font-size="9.5" opacity=".85">beat 0에 active element 전체를 메모리에 요청</text>
+              <text x="740" y="187" text-anchor="middle" font-size="9.5" opacity=".85">최대 MAX_OUTSTANDING개 동시 미결</text>
+              <text x="740" y="209" text-anchor="middle" font-size="9.5" opacity=".85">VRF는 old vd 한 번만 (필요할 때만)</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>그림 2.</b> 네 번째 단계만 교체하면 같은 골격이 세 명령군을 다 처리합니다. Permutation과 Load가 쓰는 &ldquo;beat 0에 그룹 전체를 모아두고 이후 beat는 버퍼에서 잘라 쓴다&rdquo;는 패턴은 같은 것이고, 모아오는 대상이 VRF냐 메모리냐만 다릅니다.</figcaption>
+      </figure>
+
+      <div class="tw">
+        <table class="mono">
+          <thead><tr><th>단계</th><th>ALU</th><th>Permutation</th><th>Load</th></tr></thead>
+          <tbody>
+            <tr><td>1 decode</td><td>vcore_alu_decode</td><td>vcore_perm_decode</td><td>vcore_vld_decode</td></tr>
+            <tr><td>2 issue FIFO</td><td>vcore_alu_issue_fifo</td><td>vcore_perm_issue_fifo</td><td>vcore_vld_issue_fifo</td></tr>
+            <tr><td>3 sequencer</td><td>vcore_alu_sequencer</td><td>vcore_perm_sequencer</td><td>vcore_vld_sequencer</td></tr>
+            <tr><td><b>4 오퍼랜드</b></td><td>vcore_alu_vrf_request</td><td>vcore_perm_vrf_request</td><td><b>vcore_vld_memreq</b></td></tr>
+            <tr><td>5 실행</td><td>vcore_alu_pipe<br>+ slice / narrow_slice / reduce_step / fp32_*</td><td>vcore_perm_pipe<br>+ vcore_perm_core</td><td>vcore_vld_pipe<br>+ vcore_vld_assemble</td></tr>
+            <tr><td>6 writeback</td><td>vcore_alu_wb</td><td>vcore_perm_wb</td><td>vcore_vld_wb</td></tr>
+            <tr><td>패키지</td><td>vcore_alu_pkg</td><td>vcore_perm_pkg</td><td>vcore_vld_pkg</td></tr>
+          </tbody>
+        </table>
+        <caption>세 패키지는 <code>vcore_vrf_read_req_t</code>와 <code>vcore_vrf_write_req_t</code>를 각자 같은 정의로 중복 선언합니다. TOP을 만들 때 공용 <code>vcore_pkg</code>로 한 번만 정의하는 쪽이 낫고, 그 전까지는 세 정의가 어긋나지 않도록 주의해야 합니다.</caption>
+      </div>
+    </section>
+
+    <section id="s3">
+      <h2><span class="snum">03</span><span>TOP &harr; 클러스터 계약</span></h2>
+      <p class="lede">세 클러스터의 포트는 이름만 다르고 모양이 같습니다. 그래서 TOP 입장에서는 &ldquo;cmd 하나 넣고, VRF 포트 한 쌍을 빌려주고, beat마다 commit 하나를 받는다&rdquo;는 규칙 하나만 지키면 됩니다.</p>
+
+      <h3>명령 입력 <code>cmd_i</code></h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>필드</th><th>공급 원천</th><th>의미</th><th>ALU</th><th>Perm</th><th>Load</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">inst[31:0]</td><td>명령어</td><td>원시 32비트 명령. 각 클러스터가 자기 필드를 직접 복호</td><td>OP-V</td><td>OP-V</td><td>LOAD-FP</td></tr>
+            <tr><td class="mono">scalar[31:0]</td><td>x[rs1] / f[rs1]</td><td><code>.vx</code>/<code>.vf</code>의 스칼라. <code>.vi</code>는 <code>inst[19:15]</code>에서 복호</td><td>&#10003;</td><td>&#10003;</td><td>&mdash;</td></tr>
+            <tr><td class="mono">base[31:0]</td><td>x[rs1]</td><td>unit-stride 기준 주소 (Load 전용 필드)</td><td>&mdash;</td><td>&mdash;</td><td>&#10003;</td></tr>
+            <tr><td class="mono">sew[2:0]</td><td>vtype.vsew</td><td>0/1/2/3 = 8/16/32/64</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
+            <tr><td class="mono">vlmul[2:0]</td><td>vtype.vlmul</td><td>000/001/010/011 = m1/m2/m4/m8, 111/110/101 = mf2/mf4/mf8</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
+            <tr><td class="mono">vta, vma, vill</td><td>vtype</td><td>tail / inactive 정책과 illegal vtype</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
+            <tr><td class="mono">vl, vstart</td><td>CSR</td><td>17비트. 원소 수와 재시작 위치</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
+            <tr><td class="mono">vxrm[1:0]</td><td>CSR vxrm</td><td>고정소수점 반올림</td><td>&#10003;</td><td>&mdash;</td><td>&mdash;</td></tr>
+            <tr><td class="mono">frm[2:0]</td><td>CSR frm</td><td>FP 반올림. 예약값이면 <code>vl=0</code>이어도 illegal</td><td>&#10003;</td><td>&mdash;</td><td>&mdash;</td></tr>
+            <tr><td class="mono">mask_snapshot[127:0]</td><td>TOP의 v0 shadow FF</td><td><b>명령 수락 시점의 일관된 v0</b>. 한 명령의 모든 beat가 같은 값을 씀</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
+            <tr><td class="mono">tag[15:0]</td><td>TOP</td><td>클러스터가 해석하지 않고 commit까지 그대로 전달하는 식별자</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
+          </tbody>
+        </table>
+        <caption><code>v0</code>는 CSR이 아니라 보통 벡터 레지스터입니다. 세 클러스터 모두 마스크를 읽기 위해 VRF 포트를 쓰지 않고 TOP이 건네준 스냅샷만 씁니다 &mdash; 그래서 v0 shadow FF의 정확성이 마스크 정확성과 같은 뜻입니다.</caption>
+      </div>
+
+      <h3>VRF와 완료 채널</h3>
+      <div class="kv">
+        <div><span class="k">읽기 요청</span><span class="v"><code>vrf_read_valid_o &amp;&amp; vrf_read_ready_i</code> — <code>{addr[4:0], tag[15:0]}</code>. 클러스터당 outstanding 읽기는 <b>최대 1개</b>. 응답은 요청 뒤에 오고 <code>rsp_ready</code>까지 유지되어야 함</span></div>
+        <div><span class="k">읽기 응답</span><span class="v"><code>vrf_read_rsp_valid_i &amp;&amp; vrf_read_rsp_ready_o</code> — 128비트 데이터. 세 클러스터 모두 응답 지연과 backpressure를 견디도록 TB에서 랜덤 stall로 검증됨</span></div>
+        <div><span class="k">쓰기</span><span class="v"><code>vrf_write_valid_o &amp;&amp; vrf_write_ready_i</code> — <code>{vd_addr, tag}</code> + 128비트. beat 하나가 레지스터 하나를 통째로 씀</span></div>
+        <div><span class="k">완료</span><span class="v"><code>commit_valid_o &amp;&amp; commit_ready_i</code> — beat마다 1건. 공통 필드는 <code>tag</code>, <code>last_beat</code>, <code>illegal_op</code></span></div>
+        <div><span class="k">commit 추가 필드</span><span class="v">ALU: <code>vxsat</code>, <code>fflags[4:0]</code>, <code>scalar_valid/scalar_rd/scalar_data</code>(<code>vcpop.m</code>/<code>vfirst.m</code>) &middot; Perm: 없음(스칼라는 별도 포트) &middot; Load: <code>mem_error</code></span></div>
+        <div><span class="k">Perm 스칼라 포트</span><span class="v"><code>scalar_write_valid_o</code> + <code>{rd_addr, is_fp, tag}</code> — <code>vmv.x.s</code>는 GPR, <code>vfmv.f.s</code>는 FPR로 나감</span></div>
+        <div><span class="k">Load 메모리 포트</span><span class="v"><code>mem_req {addr[31:0], size[2:0], tag[6:0]}</code> / <code>mem_rsp {tag, data[63:0], error}</code> — 태그로 매칭하므로 응답 순서 자유</span></div>
+        <div><span class="k">busy</span><span class="v">Load만 <code>busy_o</code>를 가짐. ALU와 Perm에는 없음 &mdash; §10 참조</span></div>
+      </div>
+
+      <h3>beat 전개와 원소 구역</h3>
+      <p>한 beat는 VRF 레지스터 하나(128비트)입니다. 정수 LMUL 2/4/8은 각각 2/4/8 beat로 펼쳐지고, 분수 LMUL은 한 beat 안에서 <code>vl</code>과 tail 정책으로 처리합니다. 아래 그림은 <code>SEW=32, LMUL=4, vstart=3, vl=11</code>일 때 목적지 그룹 <code>v8..v11</code>의 16개 슬롯이 어떤 구역으로 갈리는지 보여줍니다.</p>
+
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 900 260" role="img" aria-label="SEW 32, LMUL 4에서 목적지 레지스터 그룹 v8부터 v11까지 16개 원소 슬롯이 prestart 0~2, body 3~10, tail 11~15로 갈리고 beat 경계가 레지스터 경계와 일치함을 보여주는 그림">
+            <defs>
+              <pattern id="hatch3" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+                <line x1="0" y1="0" x2="0" y2="6" stroke="currentColor" stroke-width="1.1" opacity=".38"/>
+              </pattern>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor">
+              <!-- register group labels -->
+              <text x="106" y="34" text-anchor="middle" font-size="11.5">v8</text>
+              <text x="298" y="34" text-anchor="middle" font-size="11.5">v9</text>
+              <text x="490" y="34" text-anchor="middle" font-size="11.5">v10</text>
+              <text x="682" y="34" text-anchor="middle" font-size="11.5">v11</text>
+              <text x="106" y="48" text-anchor="middle" font-size="9" opacity=".65">beat 0</text>
+              <text x="298" y="48" text-anchor="middle" font-size="9" opacity=".65">beat 1</text>
+              <text x="490" y="48" text-anchor="middle" font-size="9" opacity=".65">beat 2</text>
+              <text x="682" y="48" text-anchor="middle" font-size="9" opacity=".65">beat 3</text>
+
+              <!-- slots -->
+              <g>
+                <rect x="10" y="58" width="48" height="44" fill="none" stroke="currentColor" stroke-width="1"/><rect x="10" y="58" width="48" height="44" fill="url(#hatch3)" stroke="none"/><text x="34" y="85" text-anchor="middle">0</text>
+                <rect x="58" y="58" width="48" height="44" fill="none" stroke="currentColor" stroke-width="1"/><rect x="58" y="58" width="48" height="44" fill="url(#hatch3)" stroke="none"/><text x="82" y="85" text-anchor="middle">1</text>
+                <rect x="106" y="58" width="48" height="44" fill="none" stroke="currentColor" stroke-width="1"/><rect x="106" y="58" width="48" height="44" fill="url(#hatch3)" stroke="none"/><text x="130" y="85" text-anchor="middle">2</text>
+                <rect x="154" y="58" width="48" height="44" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1"/><text x="178" y="85" text-anchor="middle">3</text>
+                <rect x="202" y="58" width="48" height="44" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1"/><text x="226" y="85" text-anchor="middle">4</text>
+                <rect x="250" y="58" width="48" height="44" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/><line x1="250" y1="102" x2="298" y2="58" stroke="currentColor" stroke-width="1" opacity=".55"/><text x="274" y="85" text-anchor="middle">5</text>
+                <rect x="298" y="58" width="48" height="44" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1"/><text x="322" y="85" text-anchor="middle">6</text>
+                <rect x="346" y="58" width="48" height="44" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1"/><text x="370" y="85" text-anchor="middle">7</text>
+                <rect x="394" y="58" width="48" height="44" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/><line x1="394" y1="102" x2="442" y2="58" stroke="currentColor" stroke-width="1" opacity=".55"/><text x="418" y="85" text-anchor="middle">8</text>
+                <rect x="442" y="58" width="48" height="44" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1"/><text x="466" y="85" text-anchor="middle">9</text>
+                <rect x="490" y="58" width="48" height="44" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1"/><text x="514" y="85" text-anchor="middle">10</text>
+                <rect x="538" y="58" width="48" height="44" fill="var(--warn-soft)" stroke="currentColor" stroke-width="1"/><text x="562" y="85" text-anchor="middle">11</text>
+                <rect x="586" y="58" width="48" height="44" fill="var(--warn-soft)" stroke="currentColor" stroke-width="1"/><text x="610" y="85" text-anchor="middle">12</text>
+                <rect x="634" y="58" width="48" height="44" fill="var(--warn-soft)" stroke="currentColor" stroke-width="1"/><text x="658" y="85" text-anchor="middle">13</text>
+                <rect x="682" y="58" width="48" height="44" fill="var(--warn-soft)" stroke="currentColor" stroke-width="1"/><text x="706" y="85" text-anchor="middle">14</text>
+                <rect x="730" y="58" width="48" height="44" fill="var(--warn-soft)" stroke="currentColor" stroke-width="1"/><text x="754" y="85" text-anchor="middle">15</text>
+              </g>
+              <!-- register boundaries -->
+              <line x1="202" y1="52" x2="202" y2="108" stroke="currentColor" stroke-width="2"/>
+              <line x1="394" y1="52" x2="394" y2="108" stroke="currentColor" stroke-width="2"/>
+              <line x1="586" y1="52" x2="586" y2="108" stroke="currentColor" stroke-width="2"/>
+              <line x1="10" y1="52" x2="10" y2="108" stroke="currentColor" stroke-width="2"/>
+              <line x1="778" y1="52" x2="778" y2="108" stroke="currentColor" stroke-width="2"/>
+
+              <!-- markers -->
+              <line x1="154" y1="58" x2="154" y2="40" stroke="var(--accent)" stroke-width="1.4"/>
+              <text x="158" y="22" font-size="10" fill="var(--accent)">vstart = 3</text>
+              <line x1="538" y1="58" x2="538" y2="40" stroke="var(--warn)" stroke-width="1.4"/>
+              <text x="542" y="22" font-size="10" fill="var(--warn)">vl = 11</text>
+
+              <!-- region brackets -->
+              <path d="M 10 116 L 10 124 L 154 124 L 154 116" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="82" y="140" text-anchor="middle" font-size="10">prestart</text>
+              <text x="82" y="154" text-anchor="middle" font-size="9" opacity=".7">항상 undisturbed</text>
+
+              <path d="M 154 116 L 154 124 L 538 124 L 538 116" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="346" y="140" text-anchor="middle" font-size="10">body</text>
+              <text x="346" y="154" text-anchor="middle" font-size="9" opacity=".7">mask=1이면 active, mask=0이면 inactive → vma ? all-ones : undisturbed</text>
+
+              <path d="M 538 116 L 538 124 L 778 124 L 778 116" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="658" y="140" text-anchor="middle" font-size="10">tail</text>
+              <text x="658" y="154" text-anchor="middle" font-size="9" opacity=".7">vta ? all-ones : undisturbed</text>
+
+              <!-- legend -->
+              <rect x="10" y="184" width="16" height="12" fill="url(#hatch3)" stroke="currentColor" stroke-width="1"/>
+              <text x="32" y="194" font-size="9.5">prestart</text>
+              <rect x="106" y="184" width="16" height="12" fill="var(--accent-soft)" stroke="currentColor" stroke-width="1"/>
+              <text x="128" y="194" font-size="9.5">active (연산/로드 결과)</text>
+              <rect x="266" y="184" width="16" height="12" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+              <line x1="266" y1="196" x2="282" y2="184" stroke="currentColor" stroke-width="1" opacity=".55"/>
+              <text x="288" y="194" font-size="9.5">inactive (v0 비트 0)</text>
+              <rect x="420" y="184" width="16" height="12" fill="var(--warn-soft)" stroke="currentColor" stroke-width="1"/>
+              <text x="442" y="194" font-size="9.5">tail</text>
+
+              <text x="10" y="226" font-size="10" opacity=".82">분수 LMUL(mf2/mf4/mf8)에서는 레지스터가 1개뿐이지만 VLMAX &lt; VLEN/SEW이므로 <tspan font-weight="600">한 레지스터 안에서 VLMAX 위쪽 슬롯도 tail</tspan>입니다.</text>
+              <text x="10" y="244" font-size="10" opacity=".82">RVV 1.0 5.4의 tail 범위가 <tspan font-family="IBM Plex Mono, monospace">vl &#8804; x &lt; max(VLMAX, VLEN/SEW)</tspan>인 이유이고, 세 클러스터 모두 이 경계를 쓰고 있습니다.</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>그림 3.</b> beat 경계는 항상 레지스터 경계와 같고, prestart/body/tail 경계는 원소 인덱스로 정해지므로 beat 경계와 무관합니다. 그래서 각 클러스터의 실행 단계는 <code>element_base + i</code>로 만든 <em>글로벌 원소 인덱스</em>로만 정책을 판단합니다.</figcaption>
+      </figure>
+
+      <div class="note warn">
+        <span class="tag">flush 계약</span>
+        <p><code>flush_i</code>는 큐·실행 중 beat·보류 결과를 버립니다. 하지만 <b>VRF 쓰기 핸드셰이크가 이미 끝난 beat는 클러스터 안에서 되돌릴 수 없습니다.</b> 그래서 flush는 (가) 명령의 첫 VRF 쓰기 전이거나, (나) 호스트가 commit 뒤에만 벡터를 실행해서 flush가 이미 커밋된 벡터 명령을 겨냥하지 않거나, (다) TOP이 VRF 리네이밍/체크포인트를 제공할 때에만 안전합니다. Load 클러스터는 여기에 하나 더 있습니다 &mdash; 외부 버스가 응답을 빚고 있으므로 <code>VLD_DRAIN</code>으로 남은 응답을 받아 버린 뒤에야 idle이 되고, TOP은 <code>busy_o</code>가 내려가기를 기다려야 합니다(§7.4).</p>
+      </div>
+    </section>
+    <section id="s4">
+      <h2><span class="snum">04</span><span>공통 정책 체인</span></h2>
+      <p class="lede">RVV의 원소별 쓰기 정책은 세 클러스터가 똑같이 씁니다. 순서가 중요합니다 &mdash; 앞선 조건이 뒤의 조건을 <em>덮어씁니다</em>. Permutation에서 찾아 고친 결함 12개 중 3개가 이 순서를 잘못 잡은 것이었습니다.</p>
+
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 740 470" role="img" aria-label="원소별 쓰기 정책 판정 순서 흐름도. vstart가 vl 이상이면 아무것도 갱신하지 않고, 원소 인덱스가 vstart보다 작으면 prestart로 기존 값 유지, vl 이상이면 tail, 연산별 예외를 확인한 뒤, 마스크가 0이면 inactive, 그 외에는 연산 또는 로드 결과를 쓴다">
+            <defs>
+              <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="currentColor"/></marker>
+              <marker id="ara4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--accent)"/></marker>
+            </defs>
+            <g font-family="IBM Plex Sans KR, sans-serif" font-size="11.5" fill="currentColor">
+              <!-- row 1 -->
+              <rect x="20" y="16" width="360" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="34" y="34" font-family="IBM Plex Mono, monospace" font-size="11.5">vstart &gt;= vl ?</text>
+              <text x="34" y="51" font-size="9.5" opacity=".7">RVV 1.0 5.4 &mdash; body 원소가 없음 (vl=0 포함)</text>
+              <line x1="380" y1="39" x2="448" y2="39" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="414" y="32" text-anchor="middle" font-size="9.5" opacity=".8">예</text>
+              <rect x="450" y="16" width="270" height="46" rx="3" fill="var(--warn-soft)" stroke="var(--warn)" stroke-width="1.2"/>
+              <text x="464" y="34" font-size="11" fill="var(--warn)">어떤 원소도 갱신하지 않음</text>
+              <text x="464" y="51" font-size="9.5" opacity=".78">tail agnostic 채움도 하면 안 됨</text>
+              <line x1="200" y1="62" x2="200" y2="86" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="208" y="79" font-size="9.5" opacity=".8">아니오</text>
+
+              <!-- row 2 -->
+              <rect x="20" y="88" width="360" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="34" y="106" font-family="IBM Plex Mono, monospace" font-size="11.5">i &lt; vstart ?</text>
+              <text x="34" y="123" font-size="9.5" opacity=".7">prestart &mdash; 예외도 일으키지 않음</text>
+              <line x1="380" y1="111" x2="448" y2="111" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="414" y="104" text-anchor="middle" font-size="9.5" opacity=".8">예</text>
+              <rect x="450" y="88" width="270" height="46" rx="3" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.2"/>
+              <text x="464" y="112" font-size="11">기존 vd 값 유지 (undisturbed)</text>
+              <line x1="200" y1="134" x2="200" y2="158" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="208" y="151" font-size="9.5" opacity=".8">아니오</text>
+
+              <!-- row 3 -->
+              <rect x="20" y="160" width="360" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="34" y="178" font-family="IBM Plex Mono, monospace" font-size="11.5">i &gt;= vl ?</text>
+              <text x="34" y="195" font-size="9.5" opacity=".7">tail &mdash; 상한은 max(VLMAX, VLEN/SEW)</text>
+              <line x1="380" y1="183" x2="448" y2="183" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="414" y="176" text-anchor="middle" font-size="9.5" opacity=".8">예</text>
+              <rect x="450" y="160" width="270" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="464" y="178" font-size="11"><tspan font-family="IBM Plex Mono, monospace">vta</tspan> ? all-ones : 기존 값</text>
+              <text x="464" y="195" font-size="9.5" opacity=".7">mask 목적지는 vta와 무관하게 항상 agnostic</text>
+              <line x1="200" y1="206" x2="200" y2="230" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="208" y="223" font-size="9.5" opacity=".8">아니오</text>
+
+              <!-- row 4 -->
+              <rect x="20" y="232" width="360" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3"/>
+              <text x="34" y="250" font-size="11">연산별 &ldquo;unchanged&rdquo; 예외에 걸리나?</text>
+              <text x="34" y="267" font-size="9.5" opacity=".7">vslideup의 i &lt; OFFSET, vcompress의 i &gt;= 압축 개수</text>
+              <line x1="380" y1="255" x2="448" y2="255" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="414" y="248" text-anchor="middle" font-size="9.5" opacity=".8">예</text>
+              <rect x="450" y="232" width="270" height="46" rx="3" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.2"/>
+              <text x="464" y="250" font-size="11">기존 값 유지</text>
+              <text x="464" y="267" font-size="9.5" opacity=".7">inactive 규칙보다 <tspan font-weight="600">강함</tspan> — vma=1이어도 채우지 않음</text>
+              <line x1="200" y1="278" x2="200" y2="302" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="208" y="295" font-size="9.5" opacity=".8">아니오</text>
+
+              <!-- row 5 -->
+              <rect x="20" y="304" width="360" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="34" y="322" font-family="IBM Plex Mono, monospace" font-size="11.5">!vm &amp;&amp; !v0[i] ?</text>
+              <text x="34" y="339" font-size="9.5" opacity=".7">inactive &mdash; 로드는 이 원소의 메모리를 건드리지 않음</text>
+              <line x1="380" y1="327" x2="448" y2="327" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="414" y="320" text-anchor="middle" font-size="9.5" opacity=".8">예</text>
+              <rect x="450" y="304" width="270" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+              <text x="464" y="330" font-size="11"><tspan font-family="IBM Plex Mono, monospace">vma</tspan> ? all-ones : 기존 값</text>
+              <line x1="200" y1="350" x2="200" y2="374" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+              <text x="208" y="367" font-size="9.5" opacity=".8">아니오</text>
+
+              <!-- final -->
+              <rect x="20" y="376" width="700" height="46" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
+              <text x="34" y="394" font-size="11.5" fill="var(--accent)">active &mdash; 결과를 씀</text>
+              <text x="34" y="411" font-size="9.5" opacity=".85">ALU: 연산 결과 &middot; Perm: 라우팅한 원소 또는 스캔 결과 &middot; Load: 메모리에서 읽은 값</text>
+
+              <text x="20" y="450" font-size="10" opacity=".8">&ldquo;agnostic&rdquo;은 세 클러스터 모두 <tspan font-family="IBM Plex Mono, monospace">all-ones</tspan>로 구현했습니다 &mdash; 스펙이 허용하는 선택 중 하나이고, golden reference와 정확히 대조할 수 있게 하려고 고정했습니다.</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>그림 4.</b> 첫 조건이 가장 강합니다. <code>vstart &gt;= vl</code>일 때 tail을 agnostic으로 채우면 <code>vl=0</code> 명령이 목적지 레지스터를 통째로 <code>all-ones</code>로 밀어버립니다 &mdash; Permutation에서 실제로 나온 결함(F9)이 이것이었습니다.</figcaption>
+      </figure>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>정책 예외</th><th>해당 명령</th><th>근거</th></tr></thead>
+          <tbody>
+            <tr><td>mask 목적지의 tail은 <b>vta와 무관하게 항상 agnostic</b></td><td><code>vmsbf/vmsif/vmsof</code>, 비교 명령, mask 논리</td><td>RVV 1.0 15.1 &mdash; mask 레지스터 전체를 덮어쓸 수 있음</td></tr>
+            <tr><td><code>vlm.v</code>의 목적지도 <b>항상 tail-agnostic</b></td><td><code>vlm.v</code></td><td>RVV 1.0 7.4 &mdash; decode에서 <code>vta</code>를 1로 강제</td></tr>
+            <tr><td><code>vstart != 0</code>이면 illegal</td><td><code>vcompress</code>, <code>viota.m</code>, <code>vmsbf/vmsif/vmsof</code>, 모든 reduction</td><td>RVV 1.0 15.1 / 15.2 / 16.5 &mdash; 중간 재시작이 정의되지 않음</td></tr>
+            <tr><td>vtype/vl/vstart를 전부 무시</td><td><code>vmv&lt;nr&gt;r.v</code></td><td>RVV 1.0 16.6 &mdash; 대신 <code>evl = NREG &times; VLEN/SEW</code>가 경계</td></tr>
+            <tr><td>목적지 원소 수가 <code>vl</code>이 아님</td><td><code>vlm.v</code> (<code>evl = ceil(vl/8)</code>), reduction (<code>vd[0]</code>만)</td><td>RVV 1.0 7.4 / 14</td></tr>
+            <tr><td>active 원소만 메모리 접근</td><td>모든 벡터 로드/스토어</td><td>RVV 1.0 7 &mdash; inactive 원소의 주소는 unmapped여도 합법</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="s5">
+      <h2><span class="snum">05</span><span>ALU 클러스터</span></h2>
+      <p class="lede">OP-V 280개 인코딩(설정 3개와 permutation 34개 제외) 중 237개를 decode/execute합니다. 목표 범위인 <code>Zve64f_Zvl128b</code> 기준으로는 245개 중 237개이며, FP64 인코딩 35개는 D 확장을 범위에서 뺐으므로 대상이 아닙니다.</p>
+
+      <h3>모듈</h3>
+      <div class="modlist">
+        <div class="mod"><div class="nm">vcore_alu_decode</div><p class="ds">OP-V를 <code>opiv</code>/<code>opm</code>/<code>opf</code> 세 하위공간으로 나눠 <code>funct6</code>로 분기합니다. 형식 제약(<code>.vi</code> 금지, <code>vm</code> 고정, <code>funct3</code> 고정)과 <code>vill</code>, <code>vl &gt; VLMAX</code>, 레지스터 그룹 정렬을 여기서 전부 거릅니다. <em>비교와 mask 논리의 목적지는 정렬을 요구하지 않습니다</em> &mdash; 일반 데이터 그룹과 다른 점.</p></div>
+        <div class="mod"><div class="nm">vcore_alu_sequencer</div><p class="ds">LMUL을 beat로 펼치면서 <em>연산군마다 다른 소스 주소 계산</em>을 합니다. widening은 <code>vs1/vs2</code>가 beat 2개마다 1개씩 전진(<code>beat_index/2</code>), extension은 <code>beat_index/extension_factor</code>, narrowing은 <code>2&times;beat_index</code>에 <code>vs2_addr_hi</code>까지. reduction과 mask 목적지는 <code>vd</code>가 beat에 따라 전진하지 않습니다.</p></div>
+        <div class="mod"><div class="nm">vcore_alu_vrf_request</div><p class="ds">1R 포트에 <code>vs2 → (vs2+1) → vs1 → old vd</code> 순서로 최대 4회. <code>.vx</code>/<code>.vi</code>는 <code>broadcast_scalar()</code>로 SEW 폭에 맞춰 스칼라를 복제하므로 VRF를 쓰지 않습니다. mask는 항상 <code>mask_snapshot</code>에서 오고 포트를 쓰지 않습니다.</p></div>
+        <div class="mod"><div class="nm">vcore_alu_pipe</div><p class="ds">8개 phase FSM: <code>PHASE_LOW</code>/<code>PHASE_HIGH</code>(일반 연산, 한 클록에 64비트씩 &mdash; initiation interval 2클록), <code>PHASE_REDUCE</code>(원소 1개/클록), <code>PHASE_MASK_REDUCE</code>(32비트/클록, 4클록), <code>PHASE_DIV_PREP</code>/<code>PHASE_DIV_STEP</code>(radix-2, 몫 1비트/클록), <code>PHASE_FP_DIV_PREP</code>/<code>PHASE_FP_DIV_WAIT</code>.</p></div>
+        <div class="mod"><div class="nm">vcore_alu_slice<br>vcore_alu_narrow_slice</div><p class="ds">64비트 폭 원소 연산 슬라이스. narrow_slice는 <code>2&times;SEW</code> 소스를 좁은 목적지로 줄이는 <code>vnsrl/vnsra/vnclipu/vnclip</code> 경로이고, <code>vxrm</code> 반올림 뒤 포화하며 활성 lane의 포화만 <code>vxsat</code>에 반영합니다.</p></div>
+        <div class="mod"><div class="nm">vcore_alu_reduce_step</div><p class="ds">반복 reduction 한 스텝. 소스 LMUL 전체 beat를 하나의 누산기에 통과시키고 <b>마지막 beat에서만</b> <code>vd[0]</code>을 씁니다. <code>vl=0</code>이면 VRF를 쓰지 않습니다.</p></div>
+        <div class="mod"><div class="nm">vcore_alu_fp32_fma<br>vcore_alu_fp32_slice<br>vcore_alu_fp32_convert<br>vcore_alu_fp32_divsqrt</div><p class="ds">FP32 경로. <code>vfadd/vfsub</code>는 정확한 1.0을 곱하고 <code>vfmul</code>은 0을 더해서 <em>하나의 fused multiply-add 데이터 경로를 공유</em>합니다. FMA는 중간 곱을 반올림하지 않고 최종에서 한 번만 반올림하며, 활성 lane의 <code>fflags</code>만 beat 결과에 OR합니다. <code>third_party/hardfloat/</code> 기반.</p></div>
+        <div class="mod"><div class="nm">vcore_alu_wb</div><p class="ds"><code>write_enable</code>로 중간 reduction beat의 VRF 쓰기를 건너뜁니다. <code>vcpop.m</code>/<code>vfirst.m</code>은 VRF 목적지를 읽지도 쓰지도 않고 <code>commit_o</code>의 <code>scalar_*</code> 필드로 나갑니다.</p></div>
+      </div>
+
+      <h3>인코딩 범위</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>연산군</th><th class="num">인코딩</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td>Integer element</td><td class="num">53</td><td>add/sub/rsub, logic, shift, min/max, 비교</td></tr>
+            <tr><td>Widen / narrow / extend</td><td class="num">47</td><td><code>vwadd*</code>, <code>vwmul*</code>, <code>vnsr*</code>, <code>vnclip*</code>, <code>vzext/vsext</code></td></tr>
+            <tr><td>FP element</td><td class="num">36</td><td>sign/class/min/max/비교 + add/sub/mul</td></tr>
+            <tr><td>FP multiply / FMA</td><td class="num">32</td><td>8개 FMA 계열, 공유 fused 경로</td></tr>
+            <tr><td>Fixed point</td><td class="num">26</td><td>포화 add/sub, 평균, rounded shift, <code>vsmul</code></td></tr>
+            <tr><td>FP convert</td><td class="num">21</td><td><code>vfcvt</code> 6종 + rtz</td></tr>
+            <tr><td>Integer multiply / MAC</td><td class="num">16</td><td>하나의 <code>multiply_a * multiply_b</code> 식을 공유 &mdash; <em>물리적 공유는 netlist로 확인 필요</em></td></tr>
+            <tr><td>Carry / borrow</td><td class="num">15</td><td><code>vadc/vmadc/vsbc/vmsbc</code></td></tr>
+            <tr><td>Integer / mask reduction</td><td class="num">12</td><td>+ <code>vcpop.m</code>, <code>vfirst.m</code></td></tr>
+            <tr><td>Integer divide</td><td class="num">8</td><td>radix-2</td></tr>
+            <tr><td>Mask logic</td><td class="num">8</td><td><code>vmand</code> 계열</td></tr>
+            <tr><td>FP reduction</td><td class="num">6</td><td><code>vfredusum/osum/min/max</code></td></tr>
+          </tbody>
+        </table>
+        <caption>인코딩은 riscv-opcodes의 <code>rv_v</code> 파일(커밋 <code>f5befa2</code>)에 고정했습니다. 지원하지 않는 형식, <code>vill</code>, 잘못된 <code>vlmul</code>/<code>sew</code>, <code>vl &gt; VLMAX</code>, 예약된 그룹 정렬은 <code>illegal_op</code>로 보고하고 VRF 쓰기를 건너뜁니다.</caption>
+      </div>
+
+      <div class="note warn">
+        <span class="tag">1GHz는 목표이지 판정이 아님</span>
+        <p>ALU 쪽 <code>TIMING_1GHZ.md</code>에 정리된 위험 경로가 8개 남아 있습니다. 가장 큰 것은 (1) <code>vcore_alu_slice</code>의 SEW64 곱셈 + <code>vsmul</code> 반올림/포화가 한 클록에 연달아 있는 경로, (2) HardFloat FP32 fused 경로가 recode부터 IEEE 변환까지 전부 조합형인 점, (3) radix-2 divider의 65비트 compare/subtract입니다. 표준셀 라이브러리·SDC·합성·STA 결과가 아직 없으므로 <b>달성으로 표시하지 않습니다.</b> FP compute 지연을 늘리게 되면 ready/valid와 beat 지연 계약도 같이 고쳐야 합니다.</p>
+      </div>
+    </section>
+    <section id="s6">
+      <h2><span class="snum">06</span><span>Permutation 클러스터</span></h2>
+      <p class="lede">RVV 16장 permutation 명령 34개 전부. 구조 자체는 처음부터 건전했고, 리뷰에서 나온 것은 <em>스펙 준수 결함 12개</em>였습니다 &mdash; 성능 문제가 아니라 오작동 또는 미구현이었고, 각각 실패하는 테스트를 먼저 만든 뒤 고쳤습니다.</p>
+
+      <h3>모듈</h3>
+      <div class="modlist">
+        <div class="mod"><div class="nm">vcore_perm_decode</div><p class="ds"><code>funct6</code> 7개(<code>0x0c/0x0e/0x0f/0x10/0x14/0x17/0x27</code>)를 <code>funct3</code>와 <code>vs1</code> 필드로 세분합니다. <code>vs1</code> 필드 구분이 중요합니다 &mdash; <code>funct6=0x10, funct3=010</code> 공간에서 <code>vs1=0x00</code>은 <code>vmv.x.s</code>(이 클러스터)이고 <code>0x10/0x11</code>은 <code>vcpop.m</code>/<code>vfirst.m</code>(ALU 클러스터)입니다.</p></div>
+        <div class="mod"><div class="nm">vcore_perm_sequencer</div><p class="ds">mask 오퍼랜드는 LMUL로 그룹화되지 않습니다. <code>vcompress</code>의 <code>vs1</code>과 <code>viota/vmsbf/vmsof/vmsif</code>의 <code>vs2</code>는 beat가 바뀌어도 <em>같은 물리 레지스터</em>를 가리키고, 대신 로컬 lane <code>i</code>가 글로벌 비트 <code>element_base+i</code>로 재해석됩니다.</p></div>
+        <div class="mod"><div class="nm">vcore_perm_vrf_request</div><p class="ds">gather/slide/compress는 vs2 그룹의 <em>어느 레지스터든</em> 참조할 수 있으므로, beat 0에서 vs2 EMUL 그룹 전체(최대 8개)를 <code>vs2_group_q</code>(1024b)로 preload합니다. <code>vrgatherei16</code>은 인덱스 오퍼랜드가 EEW=16으로 고정되어 데이터 쪽과 EMUL이 다를 수 있으므로 <code>vs1_idx_group_q</code>를 따로 가집니다. 이 preload가 소스 읽기를 O(LMUL²)에서 O(LMUL)로 만듭니다.</p></div>
+        <div class="mod"><div class="nm">vcore_perm_core</div><p class="ds">라우팅 + 정책 체인. SEW가 런타임 값이라 <code>+:</code> 폭이 상수여야 하는 제약 때문에 SEW 4가지를 각각 literal 폭으로 전개합니다. <code>vmv.x.s</code>/<code>vmv.s.x</code>/<code>vmv&lt;nr&gt;r.v</code>는 lane 루프 밖에서 처리합니다.</p></div>
+        <div class="mod"><div class="nm">vcore_perm_wb</div><p class="ds">다른 두 클러스터와 달리 <b>스칼라 목적지 포트</b>가 있습니다. <code>vmv.x.s</code>는 GPR, <code>vfmv.f.s</code>는 FPR로 나가며 <code>scalar_write_req_o.is_fp</code>가 어느 레지스터 파일인지 알려줍니다.</p></div>
+      </div>
+
+      <h3>고친 스펙 준수 결함</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>#</th><th>증상</th><th>수정</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">F1</td><td><code>vcompress</code>가 <code>vl</code>을 넘는 mask 비트까지 셌음</td><td>탐색 루프와 <code>total_count</code> 4곳을 <code>ctrl.vl</code>로 제한</td></tr>
+            <tr><td class="mono">F2</td><td>분수 LMUL이 데이터패스에 전달되지 않았음 (VLMAX 경계가 틀림)</td><td><code>ctrl.vlmax</code> 필드 추가 &mdash; <code>group_regs</code>만으로는 표현 불가</td></tr>
+            <tr><td class="mono">F3</td><td><code>viota.m</code>/<code>vmsbf</code> 계열의 vd/vs2 겹침 검사 누락</td><td>decode의 overlap case에 추가 (+ masked면 v0까지)</td></tr>
+            <tr><td class="mono">F4</td><td><code>vslidedown</code>/<code>vslide1down</code>을 과도하게 금지 &mdash; 합법 코드를 illegal로</td><td>overlap 제약은 <code>vslideup</code>/<code>vslide1up</code>에만 (16.3.1/16.3.3)</td></tr>
+            <tr><td class="mono">F5</td><td><code>vstart != 0</code>이 illegal이어야 하는 명령들이 통과</td><td><code>vpop_requires_vstart_zero()</code></td></tr>
+            <tr><td class="mono">F6</td><td>masked <code>vslideup</code>의 offset 아래 구역에 agnostic 채움이 들어감</td><td><code>slide_up_below_offset</code> 분기를 inactive보다 앞에 배치</td></tr>
+            <tr><td class="mono">F7</td><td>masked <code>viota</code>가 inactive 원소를 합산 / <code>vmsbf</code>가 inactive의 set 비트에서 멈춤</td><td>스캔에 <code>(ctrl.vm &#124;&#124; mask[k])</code> 게이트</td></tr>
+            <tr><td class="mono">F8</td><td>예약 인코딩 무검사 (<code>vm</code>, <code>vs2</code> 필드)</td><td>decode에 필드 고정 검사 추가</td></tr>
+            <tr><td class="mono">F9</td><td><code>vstart &gt;= vl</code>인데 tail을 채워서 <code>vl=0</code>이 레지스터를 통째로 밀어버림</td><td>정책 체인 최상단에 전용 분기 (그림 4)</td></tr>
+            <tr><td class="mono">F10</td><td><code>vrgather.vx</code>가 인덱스를 SEW로 절단 &mdash; 16.4는 절단하지 말라고 함</td><td><code>ctrl.idx_from_scalar</code>로 raw 32비트 스칼라 사용</td></tr>
+            <tr><td class="mono">F11</td><td><code>vmv&lt;nr&gt;r.v</code>가 <code>vstart &gt;= evl</code>을 무시</td><td><code>ctrl.vlmax</code>에 evl을 실어 가드</td></tr>
+            <tr><td class="mono">F12</td><td><code>vmv.x.s</code>/<code>vmv.s.x</code>가 LMUL&gt;1에서 EMUL 정렬 검사에 걸려 거부됨</td><td>16.1 &mdash; 스칼라 read/write는 LMUL을 무시. <code>vpop_single_beat</code> 예외</td></tr>
+            <tr><td class="mono">+</td><td>mask 목적지의 기본값이 <b>v0 비트</b>여서 마스크를 vd에 써버림</td><td>기본값을 <code>dst_old[global_index]</code>로 변경</td></tr>
+          </tbody>
+        </table>
+        <caption>검증 중 발견한 것 중 <b>RTL이 옳고 모델이 틀린</b> 경우도 기록해 둘 만합니다: tail 상한을 VLMAX로 잡은 것(스펙은 <code>max(VLMAX, VLEN/SEW)</code>), <code>vmv.v.i</code>/<code>vmerge.vim</code>의 simm5 sign-extension(<code>vrgather.vi</code> 등은 zero-extension) &mdash; RTL은 둘을 정확히 구분하고 있었습니다.</caption>
+      </div>
+
+      <h3>VRF 읽기 압력</h3>
+      <p>&ldquo;permutation은 1R1W에서 경쟁에 밀린다&rdquo;는 것이 원래 우려였습니다. 그룹 버퍼와 <code>needs_dst_old</code> 생략을 합치면 beat당 읽기가 아래처럼 됩니다.</p>
+
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 990 300" role="img" aria-label="beat당 VRF 읽기 횟수 비교. ALU의 .vv는 3회, narrowing .wv는 4회, Permutation의 vrgather.vv는 LMUL 4에서 beat 0에 6회이지만 이후 beat는 2회, vid.v는 0회, Load는 0회 또는 1회">
+            <g font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor">
+              <text x="262" y="18" font-size="9.5" opacity=".6" letter-spacing=".06em">beat 하나를 처리하는 데 필요한 VRF 읽기 →</text>
+              <g><text x="252" y="43" text-anchor="end" font-size="10.5">ALU  vadd.vv</text><rect x="262" y="30" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="294" y="43" text-anchor="middle" font-size="9">vs2</text><rect x="332" y="30" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="364" y="43" text-anchor="middle" font-size="9">vs1</text><rect x="402" y="30" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="434" y="43" text-anchor="middle" font-size="9">old vd</text><text x="480" y="43" font-size="10" opacity=".7">3회</text></g>
+              <g><text x="252" y="73" text-anchor="end" font-size="10.5">ALU  vnclip.wv</text><rect x="262" y="60" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="294" y="73" text-anchor="middle" font-size="9">vs2</text><rect x="332" y="60" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="364" y="73" text-anchor="middle" font-size="9">vs2+1</text><rect x="402" y="60" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="434" y="73" text-anchor="middle" font-size="9">vs1</text><rect x="472" y="60" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="504" y="73" text-anchor="middle" font-size="9">old vd</text><text x="550" y="73" font-size="10" opacity=".7">4회 &mdash; 최대</text></g>
+              <g><text x="252" y="103" text-anchor="end" font-size="10.5">PERM vrgather.vv m4, beat 0</text><rect x="262" y="90" width="64" height="18" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/><text x="294" y="103" text-anchor="middle" font-size="9">vs2+0</text><rect x="332" y="90" width="64" height="18" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/><text x="364" y="103" text-anchor="middle" font-size="9">vs2+1</text><rect x="402" y="90" width="64" height="18" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/><text x="434" y="103" text-anchor="middle" font-size="9">vs2+2</text><rect x="472" y="90" width="64" height="18" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/><text x="504" y="103" text-anchor="middle" font-size="9">vs2+3</text><rect x="542" y="90" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="574" y="103" text-anchor="middle" font-size="9">vs1</text><rect x="612" y="90" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="644" y="103" text-anchor="middle" font-size="9">old vd</text><text x="690" y="103" font-size="10" opacity=".7">6회 &mdash; 회색 4개가 그룹 preload</text></g>
+              <g><text x="252" y="133" text-anchor="end" font-size="10.5">PERM 같은 명령 beat 1~3</text><rect x="262" y="120" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="294" y="133" text-anchor="middle" font-size="9">vs1</text><rect x="332" y="120" width="64" height="18" fill="none" stroke="currentColor" stroke-width="1"/><text x="364" y="133" text-anchor="middle" font-size="9">old vd</text><text x="410" y="133" font-size="10" opacity=".7">2회 &mdash; 버퍼 재사용, 다시 읽지 않음</text></g>
+              <g><text x="252" y="163" text-anchor="end" font-size="10.5">PERM vid.v (vm, vta, vstart=0)</text><rect x="262" y="150" width="140" height="18" fill="none" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="4 3"/><text x="332" y="163" text-anchor="middle" font-size="9" fill="var(--accent)">읽기 없음</text><text x="416" y="163" font-size="10" opacity=".7">0회 &mdash; 모든 lane이 새로 써지므로 old vd 생략</text></g>
+              <g><text x="252" y="193" text-anchor="end" font-size="10.5">LOAD vle32.v (vstart&gt;0 또는 vta=0)</text><rect x="262" y="180" width="64" height="18" fill="none" stroke="var(--accent)" stroke-width="1.2"/><text x="294" y="193" text-anchor="middle" font-size="9" fill="var(--accent)">old vd</text><text x="340" y="193" font-size="10" opacity=".7">1회 &mdash; 클러스터의 유일한 VRF 읽기</text></g>
+              <g><text x="252" y="223" text-anchor="end" font-size="10.5">LOAD vle32.v (vm/vma + vta + vstart=0)</text><rect x="262" y="210" width="140" height="18" fill="none" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="4 3"/><text x="332" y="223" text-anchor="middle" font-size="9" fill="var(--accent)">읽기 없음</text><text x="416" y="223" font-size="10" opacity=".7">0회 &mdash; 메모리 요청만, VRF는 쓰기만</text></g>
+              <line x1="262" y1="248" x2="970" y2="248" stroke="currentColor" stroke-width="1" opacity=".3"/>
+              <text x="262" y="268" font-size="10" opacity=".82">gather의 beat 0이 무거운 대신 이후 beat가 가볍다 &mdash; LMUL=4 명령 전체로 보면 6+2+2+2 = 12회이고,</text>
+              <text x="262" y="284" font-size="10" opacity=".82">그룹 버퍼가 없다면 beat마다 그룹 전체를 다시 읽어 4&times;(4+1+1) = 24회가 됩니다.</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>그림 5.</b> 세로축은 클러스터가 아니라 &ldquo;명령 형식&rdquo;입니다. 실제로 1R1W에서 밀리는 쪽은 permutation이 아니라 <em>3~4개 소스를 읽는 ALU의 <code>.vv</code>/<code>.wv</code> 형식</em>이고, Load 클러스터는 VRF 읽기를 거의 쓰지 않습니다 &mdash; 그래서 Load의 메모리 대기와 ALU의 VRF 읽기를 겹치게 하는 것이 TOP에서 얻을 수 있는 가장 큰 이득입니다(§8.2).</figcaption>
+      </figure>
+
+      <h3>검증</h3>
+      <div class="kv">
+        <div><span class="k">tb_vcore_perm_ref</span><span class="v">독립 표현(평탄 <code>logic [63:0]</code> 원소 배열)의 golden reference. 32개 레지스터 전부 + 스칼라 비교. <b>3,018 케이스, 전부 통과</b> (ideal / stress 양쪽)</span></div>
+        <div><span class="k">tb_vcore_perm_top</span><span class="v">directed 회귀 + SVA 핸드셰이크 단정 9개 + LFSR로 1~4클록 지연을 주는 VRF 모델. <b>59 검사, 전부 통과</b></span></div>
+        <div><span class="k">tb_vcore_perm_perf</span><span class="v">포트 점유 프로파일러 (<code>RD_LAT</code> 파라미터) &mdash; 위 그림 5의 수치 근거</span></div>
+        <div><span class="k">lint</span><span class="v"><code>verilator --lint-only -Wall -Wno-UNUSEDSIGNAL</code> clean</span></div>
+      </div>
+    </section>
+    <section id="s7">
+      <h2><span class="snum">07</span><span>Load 클러스터</span></h2>
+      <p class="lede">Permutation과 같은 골격에 네 번째 단계만 바꿔 넣은 유닛입니다. 요청은 <em>실행 단계에서</em> 외부 메모리로 나가고, 응답을 다 받은 뒤 조립 단계가 돌아갑니다. 최대 <code>MAX_OUTSTANDING</code>개를 동시에 미결로 둡니다.</p>
+
+      <h3>7.1 지원 범위</h3>
+      <p>LOAD-FP(<code>opcode = 0000111</code>) 인코딩 필드는 다음과 같습니다.</p>
+<pre><code> 31   29 28    27 26 25   24     20 19   15 14  12 11  7 6      0
+|  nf  | mew | mop  | vm |  lumop  |  rs1  | width|  vd | 0000111|
+
+  mop   = 00 unit-stride | 01 indexed-unordered | 10 strided | 11 indexed-ordered
+  lumop = 00000 vle&lt;eew&gt;.v | 01000 vl&lt;nf&gt;re&lt;eew&gt;.v | 01011 vlm.v | 10000 vle&lt;eew&gt;ff.v
+  width = 000/101/110/111 → EEW 8/16/32/64   (mew=0)
+          001/010/011/100 → 스칼라 FP 로드 flh/flw/fld/flq — 절대 claim하면 안 됨</code></pre>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>인코딩</th><th>처리</th><th>이유</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">mop=00, lumop=00000</td><td><span class="pill done">지원</span> <code>vle8/16/32/64.v</code></td><td>EEW는 <code>width</code>에서, EMUL = EEW/SEW &times; LMUL</td></tr>
+            <tr><td class="mono">mop=00, lumop=01011</td><td><span class="pill done">지원</span> <code>vlm.v</code></td><td>EEW=8, EMUL=1, <code>evl=ceil(vl/8)</code>, 항상 tail-agnostic</td></tr>
+            <tr><td class="mono">mop=10</td><td><span class="pill todo">illegal</span> strided</td><td>주소 스트라이드 계산이 다름 &mdash; 별도 클러스터/모드</td></tr>
+            <tr><td class="mono">mop=01 / 11</td><td><span class="pill todo">illegal</span> indexed</td><td>인덱스 벡터를 VRF에서 읽어야 함. <code>vloxei</code>는 원소 순서까지 보장해야 함</td></tr>
+            <tr><td class="mono">lumop=01000</td><td><span class="pill todo">illegal</span> whole-register</td><td>vtype 무시, evl이 다름</td></tr>
+            <tr><td class="mono">lumop=10000</td><td><span class="pill todo">illegal</span> fault-only-first</td><td><b>pre-commit fault check 모델과 정면 충돌</b> &mdash; §7.6</td></tr>
+            <tr><td class="mono">nf != 0</td><td><span class="pill todo">illegal</span> segment</td><td>필드 개수만큼 인터리브 &mdash; 주소/목적지 계산이 다름</td></tr>
+            <tr><td class="mono">mew=1</td><td><span class="pill todo">illegal</span></td><td>EEW&gt;64 미지원</td></tr>
+          </tbody>
+        </table>
+        <caption>범위 밖 인코딩을 조용히 무시하지 않고 <code>illegal_op</code>으로 올리는 것이 중요합니다 &mdash; TOP이 다른 곳으로 라우팅하거나 trap을 걸 수 있게 하려는 것이고, 반쯤 맞는 동작을 하는 것보다 안전합니다.</caption>
+      </div>
+
+      <h3>7.2 모듈</h3>
+      <div class="modlist">
+        <div class="mod"><div class="nm">vcore_vld_pkg</div><p class="ds">타입과 정책 헬퍼. <code>MAX_ELEMS = 128</code>(EMUL 8 &times; VLEN/8), <code>VLD_TAG_W = 7</code>. <code>vld_elem_active()</code>가 &ldquo;이 원소를 실제로 fetch해야 하는가&rdquo;를 한 곳에서 정의하고, <code>vld_needs_dst_old()</code>가 old vd 읽기 생략 조건을 정의합니다.</p></div>
+        <div class="mod"><div class="nm">vcore_vld_decode</div><p class="ds">EMUL을 <em>유리수</em>(<code>emul_num/emul_den</code>)로 유지해서 분수 LMUL과 widening/narrowing EEW:SEW 비율이 정확히 합성되게 합니다. <code>1/8 &#8804; EMUL &#8804; 8</code>, <code>emul_regs = ceil(EMUL)</code>, EMUL&#8805;1일 때만 vd 정렬, <code>vl &#8804; VLMAX(SEW,LMUL)</code>, masked면 <code>vd != v0</code>(5.3).</p></div>
+        <div class="mod"><div class="nm">vcore_vld_sequencer</div><p class="ds">세 클러스터 중 가장 단순합니다 &mdash; 로드의 오퍼랜드는 VRF에서 오지 않으므로 uop에 소스 레지스터 주소가 아예 없고, 목적지 레지스터와 이 beat가 덮는 글로벌 원소 구간만 실어 보냅니다.</p></div>
+        <div class="mod"><div class="nm">vcore_vld_memreq</div><p class="ds">이 클러스터의 핵심. beat 0에서 목적지 EMUL 그룹 전체의 active 원소를 요청해 byte 버퍼(1024b)에 모으고, 이후 beat는 잘라 씁니다. old vd 읽기는 <em>동시에</em> 진행합니다. flush 시 <code>VLD_DRAIN</code>으로 남은 응답을 받아 버립니다.</p></div>
+        <div class="mod"><div class="nm">vcore_vld_assemble</div><p class="ds">라우팅 네트워크가 없습니다 &mdash; unit-stride 로드는 원소 <code>e</code>가 항상 목적지 슬롯 <code>e</code>에 들어가므로, 그룹 버퍼에서 이 beat의 구간을 잘라 정책 체인(그림 4)만 적용합니다. EEW 4가지를 각각 literal 폭으로 전개합니다.</p></div>
+        <div class="mod"><div class="nm">vcore_vld_wb</div><p class="ds">스칼라 포트가 없습니다. 추가된 것은 <code>mem_error</code>일 때 <b>VRF 쓰기를 건너뛰는</b> 것 &mdash; 반쯤 오염된 레지스터 위에서 trap 하지 않도록.</p></div>
+      </div>
+
+      <h3>7.3 메모리 인터페이스</h3>
+      <div class="kv">
+        <div><span class="k">mem_req</span><span class="v"><code>{addr[31:0], size[2:0], tag[6:0]}</code>. <code>size</code>는 AXI AxSIZE와 같은 log2(bytes). 주소는 <code>base + i &times; EEW/8</code></span></div>
+        <div><span class="k">mem_rsp</span><span class="v"><code>{tag[6:0], data[63:0], error}</code>. 데이터는 스칼라 로드처럼 <b>하위 바이트 정렬</b>. <code>tag</code>로 매칭하므로 <b>응답 순서 자유</b></span></div>
+        <div><span class="k">tag 의미</span><span class="v">명령어 안에서의 <b>글로벌 원소 인덱스</b>. sequencer가 한 번에 명령어 하나만 처리하므로 별도 할당 로직 없이 in-flight 전체에서 유일함</span></div>
+        <div><span class="k">MAX_OUTSTANDING</span><span class="v">파라미터. 요청 발행은 1원소/클록, in-flight는 이 값으로 상한. 단정으로 창 초과를 감시</span></div>
+        <div><span class="k">busy_o</span><span class="v">버스가 아직 데이터를 빚고 있는 동안 high. fence / flush retire / 인터럽트 진입 판단용</span></div>
+        <div><span class="k">가정</span><span class="v">메모리 포트가 <b>자연 정렬되지 않은 원소 접근</b>을 처리한다고 가정 (<code>base=67</code> 케이스로 테스트). 못 하는 버스면 호스트가 정렬을 보장하거나 misaligned trap 경로가 필요</span></div>
+      </div>
+
+      <h3>7.4 <code>vcore_vld_memreq</code> 상태 기계</h3>
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 840 360" role="img" aria-label="vld_memreq 상태 기계. IDLE에서 uop를 받아 RUN으로 가고, RUN 안에서 목적지 읽기 서브 FSM과 다중 미결 메모리 요청 스캔이 동시에 진행되며, 둘 다 끝나면 EXEC로 간다. flush 시 미결 요청이 남아 있으면 DRAIN으로 가서 응답을 받아 버린다">
+            <defs>
+              <marker id="ar6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="currentColor"/></marker>
+              <marker id="ara6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--accent)"/></marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor">
+              <!-- IDLE -->
+              <rect x="40" y="24" width="170" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+              <text x="125" y="44" text-anchor="middle" font-size="11.5">VLD_IDLE</text>
+              <text x="125" y="60" text-anchor="middle" font-size="9" opacity=".7">uop 수락</text>
+
+              <!-- IDLE -> RUN -->
+              <line x1="100" y1="70" x2="100" y2="118" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar6)"/>
+              <!-- EXEC -> IDLE return -->
+              <polyline points="700,120 700,92 150,92 150,72" fill="none" stroke="currentColor" stroke-width="1.1" marker-end="url(#ar6)"/>
+              <text x="430" y="88" text-anchor="middle" font-size="9" opacity=".78">exec 핸드셰이크 완료 → 다음 beat</text>
+              <!-- IDLE -> EXEC bypass -->
+              <polyline points="210,40 764,40 764,118" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="4 3" marker-end="url(#ar6)"/>
+              <text x="480" y="33" text-anchor="middle" font-size="9" opacity=".78">old vd 불필요 &amp; beat&gt;0 &mdash; 또는 illegal 명령</text>
+
+              <!-- RUN -->
+              <rect x="40" y="120" width="520" height="192" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+              <text x="56" y="140" font-size="11.5">VLD_RUN</text>
+              <text x="126" y="140" font-size="9" opacity=".7">— 아래 두 트랙이 동시에 진행 (포트가 다르므로 경쟁 없음)</text>
+
+              <rect x="58" y="150" width="484" height="62" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3"/>
+              <text x="70" y="166" font-size="9" opacity=".8">트랙 A — old vd 읽기 (VRF 1R)</text>
+              <rect x="74" y="174" width="128" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="138" y="191" text-anchor="middle" font-size="10">DST_REQ</text>
+              <line x1="202" y1="187" x2="218" y2="187" stroke="currentColor" stroke-width="1" marker-end="url(#ar6)"/>
+              <rect x="220" y="174" width="128" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="284" y="191" text-anchor="middle" font-size="10">DST_RSP</text>
+              <line x1="348" y1="187" x2="364" y2="187" stroke="currentColor" stroke-width="1" marker-end="url(#ar6)"/>
+              <rect x="366" y="174" width="128" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="430" y="191" text-anchor="middle" font-size="10">DST_DONE</text>
+
+              <rect x="58" y="220" width="484" height="78" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+              <text x="70" y="236" font-size="9" fill="var(--accent)">트랙 B — 다중 미결 메모리 요청 (beat 0에서만)</text>
+              <text x="70" y="252" font-size="9.5" opacity=".9">req_idx &lt; evl 동안 1원소/클록 스캔</text>
+              <text x="70" y="267" font-size="9.5" opacity=".9">active → 요청 (inflight &lt; MAX_OUTSTANDING일 때만) / inactive → 요청 없이 건너뜀</text>
+              <text x="70" y="282" font-size="9.5" opacity=".9">응답은 tag로 byte 버퍼에 기록 &middot; mem_done = (req_idx &#8805; evl) &amp;&amp; (inflight == 0)</text>
+
+              <!-- RUN -> EXEC -->
+              <line x1="560" y1="140" x2="616" y2="140" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar6)"/>
+              <text x="588" y="132" text-anchor="middle" font-size="8.5" opacity=".8">A&amp;&amp;B 완료</text>
+
+              <!-- EXEC -->
+              <rect x="618" y="120" width="182" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+              <text x="709" y="140" text-anchor="middle" font-size="11.5">VLD_EXEC</text>
+              <text x="709" y="156" text-anchor="middle" font-size="9" opacity=".7">assemble → pipe → wb</text>
+
+              <!-- RUN -> DRAIN -->
+              <line x1="560" y1="272" x2="616" y2="272" stroke="var(--warn)" stroke-width="1.3" marker-end="url(#ar6)"/>
+              <text x="588" y="264" text-anchor="middle" font-size="8.5" fill="var(--warn)">flush_i</text>
+
+              <!-- DRAIN -->
+              <rect x="618" y="246" width="182" height="60" rx="3" fill="var(--warn-soft)" stroke="var(--warn)" stroke-width="1.4"/>
+              <text x="709" y="264" text-anchor="middle" font-size="11.5" fill="var(--warn)">VLD_DRAIN</text>
+              <text x="709" y="279" text-anchor="middle" font-size="9" opacity=".85">남은 응답을 받아 버림</text>
+              <text x="709" y="293" text-anchor="middle" font-size="9" opacity=".85">uop 수락 금지, 버퍼 미기록</text>
+              <line x1="709" y1="306" x2="709" y2="324" stroke="var(--warn)" stroke-width="1.2" marker-end="url(#ar6)"/>
+              <text x="709" y="338" text-anchor="middle" font-size="9.5" fill="var(--warn)">inflight == 0 → VLD_IDLE</text>
+
+              <text x="40" y="338" font-size="9.5" opacity=".82">mem_rsp_ready_o = (inflight != 0) &mdash; flush에 걸리지 않음. ready를 내려버리면 버스가 deadlock 한다.</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>그림 6.</b> 이 클러스터만 flush를 리셋으로 끝낼 수 없습니다. 외부 버스는 응답을 빚고 있고, 그 응답의 ready를 내려버리면 버스가 멈춥니다. <code>inflight_q</code>는 flush에서도 보존되고, <code>VLD_DRAIN</code>이 0이 될 때까지 응답을 받아 버린 뒤에야 idle이 됩니다. VRF 읽기 포트는 Permutation과 같은 가정(같은 flush가 VRF 아비터에도 도달) 아래 그냥 버립니다 &mdash; 이 비대칭은 의도적입니다.</figcaption>
+      </figure>
+
+      <h3>7.5 다중 미결의 효과</h3>
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 900 250" role="img" aria-label="다중 미결 요청의 타이밍 비교. MAX_OUTSTANDING이 1이면 요청과 응답이 레이턴시만큼 떨어져 직렬로 반복되지만, 8이면 요청이 매 클록 연속 발행되고 응답도 매 클록 연속 반환된다">
+            <g font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor">
+              <line x1="158" y1="34" x2="878" y2="34" stroke="currentColor" stroke-width="1" opacity=".45"/>
+              <text x="158" y="22" font-size="9" opacity=".6">클록</text>
+              <text x="158" y="48" font-size="8.5" text-anchor="middle" opacity=".6">0</text>
+              <line x1="158" y1="28" x2="158" y2="40" stroke="currentColor" stroke-width="1" opacity=".45"/>
+              <text x="318" y="48" font-size="8.5" text-anchor="middle" opacity=".6">8</text>
+              <line x1="318" y1="28" x2="318" y2="40" stroke="currentColor" stroke-width="1" opacity=".45"/>
+              <text x="478" y="48" font-size="8.5" text-anchor="middle" opacity=".6">16</text>
+              <line x1="478" y1="28" x2="478" y2="40" stroke="currentColor" stroke-width="1" opacity=".45"/>
+              <text x="638" y="48" font-size="8.5" text-anchor="middle" opacity=".6">24</text>
+              <line x1="638" y1="28" x2="638" y2="40" stroke="currentColor" stroke-width="1" opacity=".45"/>
+              <text x="798" y="48" font-size="8.5" text-anchor="middle" opacity=".6">32</text>
+              <line x1="798" y1="28" x2="798" y2="40" stroke="currentColor" stroke-width="1" opacity=".45"/>
+              <text x="150" y="76" text-anchor="end" font-size="10">MAX_OUTSTANDING = 1</text>
+              <text x="150" y="92" text-anchor="end" font-size="9" opacity=".65">mem_req</text>
+              <line x1="158" y1="86" x2="878" y2="86" stroke="currentColor" stroke-width="1" opacity=".25"/>
+              <rect x="158" y="78" width="20" height="16" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+              <rect x="318" y="78" width="20" height="16" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+              <rect x="478" y="78" width="20" height="16" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+              <rect x="638" y="78" width="20" height="16" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+              <rect x="798" y="78" width="20" height="16" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+              <text x="150" y="118" text-anchor="end" font-size="9" opacity=".65">mem_rsp</text>
+              <line x1="158" y1="112" x2="878" y2="112" stroke="currentColor" stroke-width="1" opacity=".25"/>
+              <rect x="298" y="104" width="20" height="16" fill="none" stroke="currentColor" stroke-width="1"/>
+              <rect x="458" y="104" width="20" height="16" fill="none" stroke="currentColor" stroke-width="1"/>
+              <rect x="618" y="104" width="20" height="16" fill="none" stroke="currentColor" stroke-width="1"/>
+              <rect x="778" y="104" width="20" height="16" fill="none" stroke="currentColor" stroke-width="1"/>
+              <line x1="178" y1="86" x2="296" y2="104" stroke="currentColor" stroke-width="1" opacity=".4" stroke-dasharray="2 2"/>
+              <text x="238" y="102" font-size="8.5" opacity=".65">레이턴시 6</text>
+              <text x="158" y="136" font-size="9" opacity=".78">원소 하나당 8클록 &mdash; 버스가 대부분 비어 있다</text>
+              <text x="150" y="178" text-anchor="end" font-size="10" fill="var(--accent)">MAX_OUTSTANDING = 8</text>
+              <text x="150" y="194" text-anchor="end" font-size="9" opacity=".65">mem_req</text>
+              <line x1="158" y1="188" x2="878" y2="188" stroke="currentColor" stroke-width="1" opacity=".25"/>
+              <rect x="158" y="180" width="160" height="16" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <rect x="318" y="180" width="560" height="16" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="238" y="192" text-anchor="middle" font-size="8.5" fill="var(--accent)">창 채우기 8개</text>
+              <text x="598" y="192" text-anchor="middle" font-size="8.5" fill="var(--accent)">응답이 credit을 돌려주는 만큼 계속 발행 (1원소/클록)</text>
+              <text x="150" y="220" text-anchor="end" font-size="9" opacity=".65">mem_rsp</text>
+              <line x1="158" y1="214" x2="878" y2="214" stroke="currentColor" stroke-width="1" opacity=".25"/>
+              <rect x="298" y="206" width="580" height="16" fill="none" stroke="var(--accent)" stroke-width="1"/>
+              <text x="588" y="218" text-anchor="middle" font-size="8.5" fill="var(--accent)">1원소/클록 연속 반환 &mdash; 레이턴시가 파이프라인에 숨는다</text>
+              <text x="158" y="242" font-size="9" opacity=".78">요청 발행이 1원소/클록이므로 창이 레이턴시보다 커지면 더 늘려도 이득이 없다</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>그림 7.</b> 실측값(64원소, EEW=8, LMUL=4): 레이턴시 6에서 창 1이면 539클록, 창 8이면 <b>98클록</b>. 레이턴시 20에서는 1435 → <b>210클록</b>으로 이득이 더 커집니다 &mdash; 느린 메모리일수록 MO가 중요합니다.</figcaption>
+      </figure>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>MAX_OUTSTANDING</th><th class="num">레이턴시 6</th><th class="num">레이턴시 20</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">1</td><td class="num">539</td><td class="num">1435</td><td>직렬 &mdash; 기준선</td></tr>
+            <tr><td class="mono">2</td><td class="num">284</td><td class="num">&mdash;</td><td></td></tr>
+            <tr><td class="mono">4</td><td class="num">158</td><td class="num">&mdash;</td><td></td></tr>
+            <tr><td class="mono">8</td><td class="num">98</td><td class="num">210</td><td>포화 &mdash; 발행이 1원소/클록이라</td></tr>
+            <tr><td class="mono">16</td><td class="num">98</td><td class="num">&mdash;</td><td>이득 없음</td></tr>
+          </tbody>
+        </table>
+        <caption>64원소(EEW=8, LMUL=4) unit-stride 로드 한 개의 클록 수. <code>tb_vcore_vld_top</code>의 T6 항목이 측정합니다.</caption>
+      </div>
+
+      <div class="note">
+        <span class="tag">설계 결정</span>
+        <p><b>왜 beat 단위가 아니라 그룹 단위로 fetch하는가.</b> beat마다 요청을 내면 EEW=64일 때 한 beat에 원소가 2개뿐이라 MO 창이 2로 묶입니다. beat 0에서 목적지 EMUL 그룹 전체를 요청하면 창이 명령어 크기(최대 VLMAX=128 요청)까지 열리고, 이후 beat는 버스 트래픽이 0입니다 &mdash; Permutation이 vs2 그룹을 beat 0에 preload하는 것과 정확히 같은 패턴입니다.</p>
+      </div>
+
+      <h3>7.6 검증</h3>
+      <div class="kv">
+        <div><span class="k">tb_vcore_vld_ref</span><span class="v">기대 상태를 <code>exp_vrf[reg][byte]</code> <b>바이트 배열</b>로 메모리 이미지에서 직접 채우는 golden reference (DUT는 packed 레지스터 + packed 그룹 버퍼). 합법성도 raw 명령어 필드에서 다시 유도 &mdash; decode 실수가 자기 자신과 합의할 수 없게. 매 케이스 <b>32개 레지스터 전부</b> 비교.</span></div>
+        <div><span class="k">sweep 1</span><span class="v">EEW(4) &times; SEW(4) &times; LMUL(7, 분수 포함) &times; vl(5) &times; 정책(4) = <b>2,240 케이스</b></span></div>
+        <div><span class="k">sweep 2</span><span class="v"><code>vlm.v</code> &times; SEW(4) &times; LMUL(7) &times; vl(6) = <b>168 케이스</b></span></div>
+        <div><span class="k">sweep 3</span><span class="v">illegal 인코딩 <b>20종</b> &mdash; segment / mew / strided / indexed 2종 / whole-reg / fof / 예약 lumop / FP 로드 width 4종 / vlm 변형 2종 / vd=v0 / vd 미정렬 / EMUL 범위 2종 / vill / vl&gt;VLMAX</span></div>
+        <div><span class="k">sweep 4</span><span class="v">합법 경계 <b>5종</b> &mdash; EMUL=8, EMUL=1/8, unmasked vd=v0, vstart&gt;vl, 미정렬 base</span></div>
+        <div><span class="k">결과</span><span class="v"><code>2,433 cases, 2,433 passed, 0 failed</code> &mdash; ideal과 stress(랜덤 ready, 레이턴시 0~7 랜덤, <b>응답 순서 무작위</b>, VRF/commit 랜덤 stall) 양쪽. MAX_OUTSTANDING 1/2/4/8/16/32 전부</span></div>
+        <div><span class="k">tb_vcore_vld_top</span><span class="v">directed <b>15/15</b> &mdash; T1 요청 집합 정확성(6케이스), T2 flush drain + 재사용, T3 bus error 억제, T4 busy_o 커버리지, T5 FIFO 연속 발행, T6 MO 클록 측정</span></div>
+      </div>
+
+      <div class="note">
+        <span class="tag">T1이 잡는 것</span>
+        <p>데이터 비교로는 절대 안 잡히는 버그가 있습니다. RVV 1.0 7장은 로드가 <b>active 원소에만</b> 메모리를 접근하도록 요구합니다 &mdash; inactive 원소의 주소는 unmapped page를 가리켜도 합법이기 때문입니다. 따라서 masked-off / prestart / tail 원소에 요청이 하나라도 더 나가면, 결과 데이터가 전부 맞아도 진짜 버그입니다. T1은 아키텍처 정의로부터 기대 요청 집합을 독립적으로 만들고, 발행된 모든 요청의 <b>태그·주소·중복·누락</b>을 대조합니다.</p>
+      </div>
+
+      <div class="note warn">
+        <span class="tag">fault-only-first의 구조적 충돌</span>
+        <p><code>vle&lt;eew&gt;ff.v</code>는 첫 원소가 아닌 원소에서 fault가 나면 trap 대신 <code>vl</code>을 줄입니다. 이 클러스터는 <b>호스트가 commit 전에 주소를 검사한다</b>는 전제(Saturn 방식)로 설계되어 있어서, 요청을 낸 뒤 fault를 관측하고 되돌리는 경로가 없습니다. fof를 넣으려면 (가) 실행 전에 <code>vl</code>을 확정할 수 있도록 pre-commit 검사 결과를 클러스터에 되돌려주거나, (나) fof만 별도 경로로 빼야 합니다. 지금은 illegal로 보고합니다.</p>
+      </div>
+    </section>
+    <section id="s8">
+      <h2><span class="snum">08</span><span>TOP 통합 설계</span></h2>
+      <p class="lede">세 클러스터는 각자 완결되어 있지만, 아직 <em>하나의 벡터 코어가 아닙니다.</em> 없는 것은 명령을 어디로 보낼지 정하는 곳, VRF 포트를 나누는 곳, v0를 일관되게 유지하는 곳, CSR을 모으고 순서대로 retire하는 곳입니다. 이 절은 그 네 가지의 설계 계약입니다.</p>
+
+      <h3>8.1 dispatch &mdash; 어느 클러스터로 보내는가</h3>
+      <p>가장 먼저 정해야 하는 것이고, <b>&ldquo;양쪽에 뿌리고 illegal이 아닌 쪽을 쓴다&rdquo;는 방법은 쓸 수 없습니다.</b> 자기 것이 아닌 명령을 받은 클러스터는 <code>illegal_op</code>으로 <em>반응</em>하기 때문에, 두 클러스터가 동시에 반응하게 됩니다. TOP에 권위 있는 사전 복호기가 하나 있어야 합니다.</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>opcode</th><th>구분</th><th>목적지</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">0x57 (OP-V)</td><td><code>funct6</code> = <code>0x0c / 0x0e / 0x0f / 0x14</code></td><td>Permutation</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct6=0x10</code>, <code>funct3</code>&isin;{001,010} &amp; <code>vs1=0x00</code></td><td>Permutation (<code>vmv.x.s</code>, <code>vfmv.f.s</code>)</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct6=0x10</code>, <code>funct3=010</code> &amp; <code>vs1</code>&isin;{0x10,0x11}</td><td>ALU (<code>vcpop.m</code>, <code>vfirst.m</code>)</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct6=0x10</code>, <code>funct3</code>&isin;{101,110}</td><td>Permutation (<code>vmv.s.x</code>, <code>vfmv.s.f</code>)</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct6=0x10</code>, OPIV 형식</td><td>ALU (<code>vadc</code>)</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct6=0x17</code>, <code>funct3=010</code></td><td>Permutation (<code>vcompress</code>)</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct6=0x17</code>, <code>funct3=101</code></td><td>Permutation (<code>vfmerge.vfm</code>, <code>vfmv.v.f</code>)</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct6=0x17</code>, OPIV 형식 (000/100/011)</td><td><b>양쪽이 모두 구현함</b> &mdash; 아래 참조</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct6=0x27</code>, <code>funct3=011</code></td><td>Permutation (<code>vmv&lt;nr&gt;r.v</code>)</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct6=0x27</code>, 그 외 형식</td><td>ALU (<code>vsmul</code>, <code>vmulh</code>, <code>vfrsub</code>)</td></tr>
+            <tr><td class="mono">0x57</td><td>그 외 <code>funct6</code></td><td>ALU</td></tr>
+            <tr><td class="mono">0x07 (LOAD-FP)</td><td><code>width</code>&isin;{000,101,110,111}</td><td>Load</td></tr>
+            <tr><td class="mono">0x07</td><td><code>width</code>&isin;{001,010,011,100}</td><td><b>스칼라 코어</b> (flh/flw/fld/flq) &mdash; 벡터 유닛이 claim하면 안 됨</td></tr>
+            <tr><td class="mono">0x27 (STORE-FP)</td><td><code>width</code> 벡터 값</td><td>Store 클러스터 (미구현)</td></tr>
+            <tr><td class="mono">0x57</td><td><code>funct3=111</code> (OPCFG)</td><td>TOP의 CSR 블록 &mdash; <code>vsetvli/vsetivli/vsetvl</code>은 클러스터에 가지 않음</td></tr>
+          </tbody>
+        </table>
+        <caption>주의: <code>funct6=0x10</code>과 <code>0x17</code>, <code>0x27</code>은 ALU와 Permutation이 <b>같은 값을 서로 다른 <code>funct3</code>/<code>vs1</code> 조건으로</b> 나눠 갖습니다. 사전 복호기는 <code>funct6</code>만 보면 안 되고 <code>funct3</code>와 <code>vs1</code> 필드까지 봐야 합니다.</caption>
+      </div>
+
+      <div class="note warn">
+        <span class="tag">발견 &mdash; 중복 구현</span>
+        <p><code>funct6=0x17</code>의 OPIV 형식(<code>vmerge.vvm/vxm/vim</code>과 <code>vmv.v.v/.vx/.vi</code>)은 <b>두 클러스터가 모두 구현하고 있습니다.</b> ALU는 <code>VOP_MERGE</code>/<code>VOP_COPY_B</code>로, Permutation은 <code>VPOP_VMERGE</code>/<code>VPOP_VMV_V</code>로. 기능은 같고 둘 다 정상 동작하므로 버그는 아니지만, TOP이 <b>어느 한쪽으로 확정해야</b> 합니다. ALU 쪽이 자연스럽습니다 &mdash; 원소별 2:1 선택이고 mask 데이터패스가 이미 있으며, permutation의 크로스바를 점유하지 않기 때문입니다. 확정한 뒤 반대쪽 구현은 남겨두되 dispatch가 절대 보내지 않는 죽은 경로임을 주석으로 표시하거나, 정리하는 편이 낫습니다.</p>
+      </div>
+
+      <h3>8.2 VRF 아비터</h3>
+      <p>네 클러스터가 물리 1R1W 포트 하나를 씁니다. 각 클러스터는 <b>outstanding 읽기를 최대 1개</b>만 두고, 응답이 소비될 때까지 다음 요청을 내지 않습니다 &mdash; 그래서 아비터는 간단합니다: <em>grant를 준 클러스터의 응답이 소비될 때까지 grant를 유지하고, 그 뒤 재중재</em>. 이 lock이 없으면 두 클러스터의 응답이 섞여 잘못된 클러스터로 갈 수 있습니다.</p>
+      <p>중재를 굳이 만드는 이유는 성능입니다. Load는 VRF 읽기를 거의 쓰지 않고 대신 메모리에서 수십~수백 클록을 기다립니다(그림 7). 그 기다리는 동안 ALU가 VRF를 쓰게 하는 것이 TOP에서 얻는 가장 큰 이득입니다.</p>
+
+      <figure>
+        <div class="figbox">
+          <svg viewBox="0 0 880 214" role="img" aria-label="로드의 메모리 대기 구간과 ALU의 VRF 읽기를 겹치면 두 명령의 총 소요 클록이 줄어드는 것을 보여주는 타임라인 비교">
+            <defs>
+              <marker id="ar8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="currentColor"/></marker>
+              <marker id="ara8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="var(--accent)"/></marker>
+            </defs>
+            <g font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor">
+              <line x1="140" y1="26" x2="860" y2="26" stroke="currentColor" stroke-width="1" opacity=".4"/>
+              <text x="140" y="18" font-size="9" opacity=".6">시간 →</text>
+
+              <text x="132" y="58" text-anchor="end" font-size="10">한 번에 한 명령만</text>
+              <rect x="140" y="44" width="380" height="22" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="330" y="59" text-anchor="middle" font-size="9" fill="var(--accent)">vle32.v &mdash; 메모리 요청 + 응답 대기 (VRF 읽기 0회)</text>
+              <rect x="520" y="44" width="180" height="22" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="610" y="59" text-anchor="middle" font-size="9">vadd.vv &mdash; VRF 3회 + 연산</text>
+              <line x1="700" y1="38" x2="700" y2="76" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+              <text x="132" y="112" text-anchor="end" font-size="10">겹침 허용</text>
+              <rect x="140" y="98" width="380" height="22" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="330" y="113" text-anchor="middle" font-size="9" fill="var(--accent)">vle32.v &mdash; 메모리 요청 + 응답 대기</text>
+              <rect x="200" y="126" width="180" height="22" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="290" y="141" text-anchor="middle" font-size="9">vadd.vv &mdash; VRF 3회 + 연산</text>
+              <line x1="520" y1="92" x2="520" y2="158" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+              <path d="M 520 178 L 700 178" stroke="var(--warn)" stroke-width="1.4" marker-start="url(#ar8)" marker-end="url(#ar8)"/>
+              <text x="610" y="170" text-anchor="middle" font-size="9.5" fill="var(--warn)">절약 &mdash; ALU가 Load의 메모리 대기 뒤에 숨는다</text>
+              <text x="140" y="202" font-size="9" opacity=".75">전제: scoreboard가 두 명령의 레지스터 겹침을 막고, 아비터가 응답을 올바른 클러스터로 돌려준다</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>그림 8.</b> 이 겹침이 아비터를 만드는 유일한 이유입니다. 한 번에 한 명령만 실행한다면 아비터는 단순 mux로 충분합니다 &mdash; 먼저 mux로 만들어 동작시키고, 겹침은 scoreboard가 준비된 다음에 여는 것이 순서로는 안전합니다.</figcaption>
+      </figure>
+
+      <h3>8.3 hazard scoreboard와 v0 shadow</h3>
+      <div class="kv">
+        <div><span class="k">레지스터 busy bit</span><span class="v">32개. 명령을 dispatch할 때 목적지 그룹의 비트를 세우고, <code>last_beat</code> commit에서 내립니다. 새 명령은 자기 소스/목적지 중 busy인 것이 있으면 dispatch에서 멈춥니다 &mdash; in-order single-issue면 이것으로 충분합니다.</span></div>
+        <div><span class="k">v0 특례</span><span class="v"><code>mask_snapshot</code>은 <b>dispatch 시점</b>에 떠집니다. 그래서 v0에 대한 쓰기가 아직 남아 있으면 masked 명령을 dispatch할 수 없습니다. 가장 단순한 정답은 <em>v0가 busy인 동안 masked 명령 dispatch를 멈추는 것</em>이고, forwarding은 나중 최적화입니다.</span></div>
+        <div><span class="k">shadow 갱신</span><span class="v">VRF 쓰기 핸드셰이크와 <b>같은 사이클에</b> shadow FF도 갱신해야 합니다. 한 사이클이라도 어긋나면 마스크가 한 명령 늦게 반영됩니다 (그림 1의 파선 경로).</span></div>
+        <div><span class="k">LMUL 무관</span><span class="v">v0는 LMUL&gt;1에서도 레지스터 한 개이므로 스냅샷 하나로 충분하고, 한 명령의 모든 beat가 같은 값을 씁니다 &mdash; 세 클러스터가 다 이 계약을 지킵니다.</span></div>
+      </div>
+
+      <h3>8.4 CSR과 retire 순서</h3>
+      <ul>
+        <li><b>sticky OR</b> &mdash; ALU commit의 <code>vxsat</code>과 <code>fflags[4:0]</code>을 CSR에 OR합니다. beat마다 올라오므로 한 명령이 여러 번 기여할 수 있습니다.</li>
+        <li><b>trap 소스</b> &mdash; 세 클러스터의 <code>illegal_op</code>과 Load의 <code>mem_error</code>. <code>illegal_op</code>인 beat는 VRF를 쓰지 않으므로 아키텍처 상태가 깨끗합니다.</li>
+        <li><b><code>vstart</code> 정리</b> &mdash; 마지막 beat를 수락하면 아키텍처 <code>vstart</code>를 0으로 되돌립니다.</li>
+        <li><b>순서</b> &mdash; 세 클러스터는 서로 다른 지연을 가지므로 <em>완료 순서가 발행 순서와 다를 수 있습니다</em>. 1-beat ALU 명령이 긴 로드보다 먼저 끝날 수 있습니다. 호스트가 in-order retire를 요구하면 TOP에 retire 큐가 필요합니다. 가장 단순한 대안은 앞 명령의 <code>last_beat</code>가 retire될 때까지 다음 명령을 dispatch하지 않는 완전 직렬화이고, 그러면 그림 8의 이득은 포기하게 됩니다.</li>
+        <li><b>VRF 쓰기 순서</b> &mdash; 서로 다른 레지스터에 쓰는 것은 문제 없고, 같은 레지스터는 scoreboard가 막습니다. 따라서 아비터는 쓰기 순서를 보장할 필요가 없습니다.</li>
+      </ul>
+
+      <h3>8.5 벡터 메모리 포트</h3>
+      <p>Load 클러스터의 태그 인터페이스를 실제 캐시/버스에 붙이는 어댑터가 필요하고, 여기서 해야 할 일이 두 가지 있습니다.</p>
+      <ol>
+        <li><b>coalescing.</b> 지금은 unit-stride인데도 원소당 요청 1개를 냅니다 &mdash; 16바이트 로드가 1바이트 요청 16개입니다. 64비트 버스라면 요청 2개로 끝날 일이므로, 캐시에 그대로 붙이면 태그 조회가 8배로 늘어납니다. 클러스터 쪽에서 고칠 수도 있고(§10-1), 포트에서 인접 요청을 병합할 수도 있습니다.</li>
+        <li><b>tag 재할당.</b> 클러스터의 태그는 원소 인덱스이고, 버스는 자기 ID 공간이 있습니다. 포트가 둘 사이를 매핑하고, 나중에 Store 클러스터가 붙으면 두 클러스터의 태그를 하나의 ID 공간으로 중재해야 합니다.</li>
+      </ol>
+    </section>
+
+    <section id="s9">
+      <h2><span class="snum">09</span><span>Rocket 연결</span></h2>
+      <p class="lede">RVV는 <code>custom0-3</code>이 아니라 OP-V(0x57)와 LOAD-FP/STORE-FP를 씁니다. 그래서 <b>RoCC는 맞는 인터페이스가 아닙니다</b> &mdash; Berkeley의 Saturn이 Rocket/Shuttle의 X/M/WB 단계에 직접 붙는 것과 같은 방식이 필요합니다.</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>연결 지점</th><th>해야 할 일</th><th>현재 상태</th></tr></thead>
+          <tbody>
+            <tr><td>Decode 단계</td><td>벡터 명령을 illegal로 처리하지 않게 인식. <code>vsetvl*</code>은 스칼라 쪽에서 vtype/vl을 갱신</td><td><span class="pill todo">미구현</span></td>
+            </tr>
+            <tr><td>X 단계</td><td><code>x[rs1]</code>/<code>f[rs1]</code>을 읽어 <code>{inst, scalar/base, CSR 상태, tag}</code>로 Vector_Core TOP에 전달</td><td><span class="pill todo">미구현</span></td></tr>
+            <tr><td>Pre-commit fault check</td><td>벡터 메모리 명령의 주소를 <b>commit 전에</b> 검사. Load 클러스터는 fault 없는 주소를 전제로 요청을 내므로 이 검사가 필수</td><td><span class="pill todo">미구현 &mdash; 설계 전제</span></td></tr>
+            <tr><td>Post-commit execution</td><td>스칼라 코어가 명령을 commit한 뒤 벡터 유닛이 실행 → rollback이 필요 없음. 클러스터가 VRF 쓰기를 되돌릴 수 없다는 제약과 정확히 맞는 모델</td><td><span class="pill todo">미구현</span></td></tr>
+            <tr><td><code>busy</code> 신호</td><td><code>fence</code>, <code>vxsat</code>/<code>fflags</code> CSR 읽기, 인터럽트 진입에서 스칼라 코어가 멈춰야 함</td><td><span class="pill part">Load만 있음</span></td></tr>
+            <tr><td>메모리 포트</td><td>태그 OoO 인터페이스를 HellaCache 또는 전용 TileLink 클라이언트 포트에 붙이는 어댑터 + coalescer</td><td><span class="pill todo">미구현</span></td></tr>
+            <tr><td>Trap 보고</td><td><code>illegal_op</code> / <code>mem_error</code>를 스칼라 trap 경로로. <code>vstart</code>를 정확히 남겨 재시작 가능하게</td><td><span class="pill todo">미구현</span></td></tr>
+          </tbody>
+        </table>
+        <caption>Saturn이 &ldquo;모든 벡터 명령을 post-commit으로 실행&rdquo;하고 fault를 pre-commit(PFC/IFC)에 검사하는 조합을 택한 이유가 여기 그대로 적용됩니다 &mdash; 벡터 상태를 되돌리는 것이 스칼라 상태를 되돌리는 것보다 훨씬 비싸기 때문입니다.</caption>
+      </div>
+    </section>
+
+    <section id="s10">
+      <h2><span class="snum">10</span><span>남은 작업과 주의사항</span></h2>
+      <p class="lede">우선순위 순서로 정리했습니다. 위쪽 세 개는 &ldquo;없으면 통합이 불가능한 것&rdquo;, 아래쪽은 &ldquo;있으면 좋은 것&rdquo;과 &ldquo;기억해 둘 제약&rdquo;입니다.</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>#</th><th>항목</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td><b>TOP 골격</b></td><td>dispatch 사전 복호기 + VRF 아비터(먼저 단순 mux) + v0 shadow FF + CSR/retire. §8이 그 계약입니다. VRF 본체(32&times;128b 1R1W)도 아직 없습니다.</td></tr>
+            <tr><td class="num">2</td><td><b><code>funct6=0x17</code> OPIV 중복</b></td><td>ALU와 Permutation이 <code>vmerge</code>/<code>vmv.v</code>를 둘 다 구현합니다. 어느 쪽으로 보낼지 확정하고 반대쪽은 죽은 경로로 표시하거나 제거.</td></tr>
+            <tr><td class="num">3</td><td><b>ALU/Perm에 <code>busy</code> 추가</b></td><td>Rocket 연결에 필요합니다. Load는 이미 있습니다. 구조는 같으므로 각 클러스터의 상태가 IDLE이 아니거나 FIFO가 비어 있지 않은 동안 high로 두면 됩니다.</td></tr>
+            <tr><td class="num">4</td><td><b>요청 coalescing</b></td><td>unit-stride 로드가 원소당 요청 1개를 냅니다. <code>memreq</code>의 스캔 루프와 태그 의미(원소 인덱스 → 요청 번호)를 바꾸고, 응답을 여러 원소에 분배하는 작업이 필요합니다. 캐시에 붙이기 전에 해야 합니다.</td></tr>
+            <tr><td class="num">5</td><td>Store 클러스터</td><td><code>vse*.v</code> + <code>vsm.v</code>. Load와 대칭이지만 <em>VRF 읽기가 늘고 메모리 쓰기 순서 제약이 생깁니다</em>. RVWMO상 <code>vsoxei</code>만 원소 순서를 보장하므로 unit-stride는 순서 자유.</td></tr>
+            <tr><td class="num">6</td><td>메모리 명령 나머지</td><td>strided / indexed / segment / whole-register / fault-only-first. fof는 §7.6의 구조적 충돌 때문에 별도 설계가 필요합니다.</td></tr>
+            <tr><td class="num">7</td><td>ALU 남은 8개 인코딩</td><td>목표 범위 245개 중 237개 완료. FP64 35개는 D 확장을 범위에서 뺐으므로 대상 아님.</td></tr>
+            <tr><td class="num">8</td><td>ALU TOP 통합 테스트 확대</td><td>현재 90/280. decode/execute는 237개인데 통합 레벨 검증이 뒤처져 있습니다.</td></tr>
+            <tr><td class="num">9</td><td>공용 <code>vcore_pkg</code></td><td>세 패키지가 <code>vcore_vrf_read_req_t</code>/<code>vcore_vrf_write_req_t</code>를 중복 선언합니다. 한 곳으로 모으는 것이 맞고, 그 전까지는 어긋나지 않게 주의.</td></tr>
+            <tr><td class="num">10</td><td class="mono">flush_i</td><td>세 클러스터의 TB에서 모두 상수 0입니다 &mdash; Load의 T2만 실제로 flush를 구동합니다. ALU/Perm의 flush 경로는 아직 한 번도 자극된 적이 없습니다.</td></tr>
+            <tr><td class="num">11</td><td>1GHz 타이밍</td><td>ALU의 <code>TIMING_1GHZ.md</code>에 위험 경로 8개. 라이브러리/SDC/합성/STA 없이는 달성으로 표시하지 않습니다.</td></tr>
+            <tr><td class="num">12</td><td>VLEN 고정</td><td>세 패키지가 <code>mask_snapshot</code> 폭 때문에 <b>VLEN=128에 묶여</b> 있습니다. 다른 VLEN은 재설계입니다.</td></tr>
+            <tr><td class="num">13</td><td>비정렬 원소 접근</td><td>Load가 메모리 포트의 지원을 전제합니다. 못 하는 버스면 호스트가 정렬을 보장하거나 misaligned trap 경로가 필요합니다.</td></tr>
+            <tr><td class="num">14</td><td>요청 스캔 1원소/클록</td><td>mask가 희소하면 inactive 원소를 건너뛰는 데도 클록을 쓰므로 스캔 자체가 병목이 될 수 있습니다 (priority encoder로 개선 가능).</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <span class="tag">권장 순서</span>
+        <p>1 → 3 → 2 로 먼저 &ldquo;세 클러스터가 하나의 코어로 동작하는 상태&rdquo;를 만들고 (아비터는 단순 mux, 명령은 완전 직렬), 그 위에서 4 → 5를 하고, scoreboard와 겹침 실행(그림 8)은 그다음에 여는 것이 안전합니다. 겹침을 먼저 열면 hazard 버그와 클러스터 버그가 섞여서 디버깅이 어려워집니다.</p>
+      </div>
+    </section>
+
+    <footer class="doc">
+      <p>Vector_Core RTL 레퍼런스 &middot; <code>rtl/vector_alu</code> &middot; <code>rtl/vector_permutation</code> &middot; <code>rtl/vector_load</code> &middot; 2026-09-17</p>
+      <p>이 문서의 내용은 저장소의 RTL과 각 클러스터의 테스트벤치 실행 결과에서 직접 확인한 것입니다. 구현되지 않은 블록은 &ldquo;미구현&rdquo;으로 표시했고, 검증되지 않은 주장(특히 타이밍)은 그렇다고 적었습니다.</p>
+    </footer>
+  </main>
+</div>
+
+</body>
+</html>
