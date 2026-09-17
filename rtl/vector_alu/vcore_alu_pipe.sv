@@ -38,6 +38,7 @@ module vcore_alu_pipe #(
   logic [4:0] low_fflags_q;
   logic illegal_q;
   logic [63:0] reduction_acc_q, reduction_next;
+  logic reduction_invalid, reduction_invalid_q;
   logic [VLEN-1:0] reduction_src_q;
   logic [4:0] reduction_index_q, reduction_elements;
   logic [1:0] mask_chunk_q;
@@ -250,7 +251,7 @@ module vcore_alu_pipe #(
     .source_i(reduction_src_q), .mask_i(mask_q),
     .element_index_i(reduction_index_q),
     .accumulator_i(reduction_acc_q), .ctrl_i(ctrl_q),
-    .accumulator_o(reduction_next)
+    .accumulator_o(reduction_next), .invalid_o(reduction_invalid)
   );
 
   // Radix-2 restoring division: one quotient bit and one 65-bit subtract
@@ -352,6 +353,7 @@ module vcore_alu_pipe #(
       low_fflags_q <= '0;
       illegal_q <= 1'b0;
       reduction_acc_q <= '0;
+      reduction_invalid_q <= 1'b0;
       reduction_src_q <= '0;
       reduction_index_q <= '0;
       mask_chunk_q <= '0;
@@ -396,6 +398,7 @@ module vcore_alu_pipe #(
         if (vop_is_reduction(ctrl_i.op)) begin
           reduction_src_q <= src2_i[VLEN-1:0];
           reduction_index_q <= '0;
+          reduction_invalid_q <= 1'b0;
           if (ctrl_i.first_beat)
             reduction_acc_q <= reduction_seed(src1_i,ctrl_i);
           phase_q <= PHASE_REDUCE;
@@ -434,6 +437,7 @@ module vcore_alu_pipe #(
       if (phase_q == PHASE_REDUCE) begin
         if (reduction_index_q + 5'd1 < reduction_elements) begin
           reduction_acc_q <= reduction_next;
+          reduction_invalid_q <= reduction_invalid_q | reduction_invalid;
           reduction_index_q <= reduction_index_q + 5'd1;
         end else if (rsp_slot_ready) begin
           reduction_acc_q <= reduction_next;
@@ -443,7 +447,7 @@ module vcore_alu_pipe #(
           rsp_meta_q.vd_addr <= ctrl_q.vd_addr;
           rsp_meta_q.last_beat <= ctrl_q.last_beat;
           rsp_meta_q.vxsat <= 1'b0;
-          rsp_meta_q.fflags <= '0;
+          rsp_meta_q.fflags <= {reduction_invalid_q | reduction_invalid,4'b0};
           rsp_meta_q.write_enable <= ctrl_q.last_beat && (ctrl_q.vl != 0);
           rsp_meta_q.scalar_valid <= 1'b0;
           rsp_meta_q.scalar_rd <= '0;

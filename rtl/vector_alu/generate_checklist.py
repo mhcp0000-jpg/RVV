@@ -94,6 +94,7 @@ NEW_FORMS = {
     "vnsra": {"wv", "wx", "wi"},
     "vnclipu": {"wv", "wx", "wi"},
     "vnclip": {"wv", "wx", "wi"},
+    "vfredmin": {"vs"}, "vfredmax": {"vs"},
 }
 
 
@@ -174,7 +175,8 @@ def main() -> None:
                     "vdivu.vx", "vfsgnj.vf", "vfclass.v", "vmfle.vf",
                     "vzext.vf2", "vzext.vf4", "vzext.vf8",
                     "vsext.vf2", "vsext.vf4", "vsext.vf8",
-                    "vwaddu.vv", "vwadd.vx", "vwsub.wv"
+                    "vwaddu.vv", "vwadd.vx", "vwsub.wv",
+                    "vfredmin.vs", "vfredmax.vs"
                 } or (base in {"vwaddu", "vwadd", "vwsubu", "vwsub"} and
                       suffix in {"vv", "vx", "wv", "wx"}) or
                     (base in {"vwmulu", "vwmulsu", "vwmul", "vwmaccu",
@@ -191,6 +193,8 @@ def main() -> None:
                 "first-set index" if name == "vfirst.m" else
                 "m2, destructive vd" if name == "vmacc.vx" else
                 "m2, unaligned mask registers, tail bits" if name == "vmxor.mm" else
+                "m2, NaN/zero, mask and fflags" if name in {
+                    "vfredmin.vs", "vfredmax.vs"} else
                 "masked lanes, divide by 2" if name == "vdivu.vx" else
                 "scalar FP32 sign bits" if name == "vfsgnj.vf" else
                 "zero, infinity, sNaN, qNaN" if name == "vfclass.v" else

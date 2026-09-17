@@ -119,6 +119,8 @@ package vcore_alu_pkg;
     VOP_NSRA     = 8'd104,
     VOP_NCLIPU   = 8'd105,
     VOP_NCLIP    = 8'd106,
+    VOP_FREDMIN  = 8'd107,
+    VOP_FREDMAX  = 8'd108,
     VOP_INVALID  = 8'hff
   } vop_e;
 
@@ -254,6 +256,7 @@ package vcore_alu_pkg;
       VOP_REDSUM, VOP_REDAND, VOP_REDOR, VOP_REDXOR,
       VOP_REDMINU, VOP_REDMIN, VOP_REDMAXU, VOP_REDMAX,
       VOP_WREDSUMU, VOP_WREDSUM: return 1'b1;
+      VOP_FREDMIN, VOP_FREDMAX: return 1'b1;
       default: return 1'b0;
     endcase
   endfunction
@@ -376,7 +379,8 @@ package vcore_alu_pkg;
       VOP_WADDU_W, VOP_WADD_W, VOP_WSUBU_W, VOP_WSUB_W,
       VOP_WMULU, VOP_WMULSU, VOP_WMUL,
       VOP_WMACCU, VOP_WMACC, VOP_WMACCUS, VOP_WMACCSU,
-      VOP_NSRL, VOP_NSRA, VOP_NCLIPU, VOP_NCLIP:
+      VOP_NSRL, VOP_NSRA, VOP_NCLIPU, VOP_NCLIP,
+      VOP_FREDMIN, VOP_FREDMAX:
         return 1'b1;
       default: return 1'b0;
     endcase

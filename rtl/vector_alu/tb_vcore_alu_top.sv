@@ -799,6 +799,89 @@ module tb_vcore_alu_top;
         !last_vxsat)
       $fatal(1,"narrow SEW32 signed saturation mismatch %h",mem[20]);
 
+    // FP32 min/max reductions use the LMUL sequencer and one element/clock.
+    mem[2] = {96'b0,32'h3f80_0000}; // +1.0 seed
+    mem[8] = {32'h8000_0000,32'h0000_0000,
+              32'hbf80_0000,32'h4000_0000};
+    cmd.inst = {6'h05,1'b1,5'd8,5'd2,3'b001,5'd20,7'h57};
+    cmd.sew = VSEW_32;
+    cmd.vlmul = 3'b000;
+    cmd.vl = 4;
+    cmd.frm = 3'b000;
+    cmd.tag = 16'hcc;
+    send_command();
+    await_commits(166);
+    if (mem[20][31:0] !== 32'hbf80_0000 || last_fflags != 0)
+      $fatal(1,"vfredmin numeric reduction mismatch %h flags=%h",mem[20],last_fflags);
+
+    mem[2][31:0] = 32'h8000_0000; // -0.0 seed
+    mem[8] = {4{32'h0000_0000}};
+    cmd.inst = {6'h07,1'b1,5'd8,5'd2,3'b001,5'd20,7'h57};
+    cmd.tag = 16'hcd;
+    send_command();
+    await_commits(167);
+    if (mem[20][31:0] !== 32'h0000_0000 || last_fflags != 0)
+      $fatal(1,"vfredmax signed zero mismatch %h",mem[20]);
+
+    mem[2][31:0] = 32'h7fc0_0000; // quiet NaN seed
+    mem[8] = {32'h4000_0000,32'h7f80_0001,
+              32'h7fc0_0000,32'h3f80_0000};
+    cmd.inst = {6'h05,1'b1,5'd8,5'd2,3'b001,5'd20,7'h57};
+    cmd.tag = 16'hce;
+    send_command();
+    await_commits(168);
+    if (mem[20][31:0] !== 32'h3f80_0000 || last_fflags != 5'h10)
+      $fatal(1,"vfredmin NaN/NV mismatch %h flags=%h",mem[20],last_fflags);
+
+    // Masked signaling NaN must not raise NV.
+    mem[2][31:0] = 32'h4000_0000;
+    mem[8] = {32'h4000_0000,32'h7f80_0001,
+              32'h4000_0000,32'h4000_0000};
+    cmd.inst = {6'h07,1'b0,5'd8,5'd2,3'b001,5'd20,7'h57};
+    cmd.mask_snapshot = 128'hb;
+    cmd.tag = 16'hcf;
+    send_command();
+    await_commits(169);
+    if (mem[20][31:0] !== 32'h4000_0000 || last_fflags != 0)
+      $fatal(1,"masked FP signaling NaN raised NV");
+
+    // The second LMUL source beat changes the final reduction result.
+    mem[2][31:0] = 32'h42c8_0000; // +100.0
+    mem[8] = {4{32'h4000_0000}};
+    mem[9] = {{3{32'h3f80_0000}},32'hc040_0000}; // -3.0 in lane 0
+    cmd.inst = {6'h05,1'b1,5'd8,5'd2,3'b001,5'd20,7'h57};
+    cmd.vlmul = 3'b001;
+    cmd.vl = 8;
+    cmd.mask_snapshot = '1;
+    cmd.tag = 16'hd0;
+    send_command();
+    await_commits(171);
+    if (mem[20][31:0] !== 32'hc040_0000 || last_fflags != 0)
+      $fatal(1,"vfredmin LMUL=2 mismatch %h",mem[20]);
+
+    // Reserved frm is rejected for FP instructions, including vl=0.
+    cmd.frm = 3'b111;
+    cmd.vl = 0;
+    cmd.tag = 16'hd1;
+    send_command();
+    await_commits(172);
+    if (illegal_count != 8)
+      $fatal(1,"invalid frm accepted for FP reduction");
+
+    // With no active elements, even an sNaN seed is copied unchanged.
+    mem[2][31:0] = 32'h7f80_0001;
+    mem[8] = {4{32'h3f80_0000}};
+    cmd.inst = {6'h05,1'b0,5'd8,5'd2,3'b001,5'd20,7'h57};
+    cmd.frm = 3'b000;
+    cmd.vlmul = 3'b000;
+    cmd.vl = 4;
+    cmd.mask_snapshot = '0;
+    cmd.tag = 16'hd2;
+    send_command();
+    await_commits(173);
+    if (mem[20][31:0] !== 32'h7f80_0001 || last_fflags != 0)
+      $fatal(1,"inactive FP reduction changed sNaN seed/flags");
+
     $display("tb_vcore_alu_top PASS");
     $finish;
   end

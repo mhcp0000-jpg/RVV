@@ -191,7 +191,9 @@ module vcore_alu_decode #(
     end else if (opf) begin
       case (funct6)
         6'h04: decoded_o.ctrl.op = VOP_FMIN;
+        6'h05: decoded_o.ctrl.op = VOP_FREDMIN;
         6'h06: decoded_o.ctrl.op = VOP_FMAX;
+        6'h07: decoded_o.ctrl.op = VOP_FREDMAX;
         6'h08: decoded_o.ctrl.op = VOP_FSGNJ;
         6'h09: decoded_o.ctrl.op = VOP_FSGNJN;
         6'h0a: decoded_o.ctrl.op = VOP_FSGNJX;
@@ -212,6 +214,9 @@ module vcore_alu_decode #(
       endcase
       // RV32IMFC has F, but no D or Zfh: floating SEW is 32 only.
       operation_valid &= (cmd_i.sew == VSEW_32);
+      operation_valid &= (cmd_i.frm <= 3'b100);
+      if (vop_is_reduction(decoded_o.ctrl.op))
+        operation_valid &= (funct3 == 3'b001);
     end else operation_valid = 1'b0;
 
     if (form_vi)

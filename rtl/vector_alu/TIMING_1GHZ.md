@@ -10,6 +10,7 @@
 |---|---|---|---|
 | 일반 정수 | 128비트 beat의 하위/상위 64비트를 각각 계산 | 2 compute 클록 + VRF/WB | SEW64의 64비트 곱셈, 가변 shift/rounding, mask 선택 mux |
 | 정수 reduction | 한 요소를 64비트 누산기에 적용 | source 요소 수에 비례 | 동적 요소 선택 + 64비트 add/compare |
+| FP32 min/max reduction | 한 FP32 요소를 seed/누산 값과 비교 | source 요소 수에 비례 | 동적 선택 + NaN/zero 판정 + 비교 |
 | mask reduction | 32비트 mask를 scan/popcount | 4 compute 클록 | 32비트 활성화, popcount, first-bit 선택 |
 | 정수 divide/remainder | radix-2로 몫 1비트 | 활성 요소당 SEW+준비 클록 | 65비트 compare/subtract + mux |
 | 정수 확장 `vzext/vsext` | source sub-register 선택 후 64비트씩 확장 | 2 compute 클록 + VRF/WB | 입력의 128비트 정렬 mux와 lane sign-extension mux |

@@ -31,6 +31,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 - `vwaddu/vwadd/vwsubu/vwsub`의 `.vv/.vx/.wv/.wx`는 source SEW의 두 배를 destination EEW로 사용합니다. 정수 LMUL m1/m2/m4의 destination 그룹은 각각 2/4/8개 레지스터이고, m8은 EMUL 제한으로 거부합니다. `.wv/.wx`의 `vs2`는 이미 넓은 EEW로 읽습니다. 서로 다른 EEW 그룹이 합법적으로 겹치면 해당 명령의 비활성 mask 및 tail 결과는 agnostic으로 처리합니다.
 - `vwmulu/vwmulsu/vwmul/vwmaccu/vwmacc/vwmaccus/vwmaccsu`의 13개 형식도 같은 widening beat·VRF 주소 경로를 사용합니다. 명령별 signed/unsigned 조합으로 source를 2×SEW로 확장한 뒤, 기존 정수 multiply/MAC 연산 경로에서 하위 2×SEW 결과를 사용합니다.
 - `vnsrl/vnsra/vnclipu/vnclip`의 `.wv/.wx/.wi`는 source EEW=`2×SEW`, source EMUL=`2×LMUL`입니다. m1/m2/m4는 destination beat마다 VRF에서 넓은 `vs2` 레지스터 두 개를 순차로 읽으며, `.wv`는 추가로 `vs1`, 모든 형식은 old `vd`를 읽습니다. mf2/mf4/mf8은 source가 한 레지스터 안에 들어갑니다. `.wi`의 5비트 shift amount는 zero extension입니다. `vnclip*`는 `vxrm` 반올림 뒤 포화하고 활성 lane의 포화만 `vxsat`에 반영합니다. source/destination EEW가 다른 합법적인 low-end overlap에서는 inactive mask 및 tail을 agnostic으로 처리합니다.
+- `vfredmin.vs`와 `vfredmax.vs`는 FP32 요소를 source LMUL 전체에 걸쳐 한 lane씩 누산합니다. NaN, 부호 있는 zero, mask, signaling NaN의 NV 플래그를 처리하고 마지막 beat에서만 `vd[0]`을 씁니다. FP 명령의 `frm`이 예약 값이면 `vl=0`이어도 illegal로 보고합니다.
 - FIFO 깊이는 `ISSUE_DEPTH` 파라미터로 정합니다(최소 2). 데이터 폭은 현재 패키지의 mask snapshot과 연결되어 **VLEN=128 고정**이며, 다른 VLEN은 재설계가 필요합니다.
 
 ## TOP 입력 계약
@@ -52,7 +53,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 
 `v0`는 CSR이 아닙니다. TOP은 VRF의 v0에 대한 모든 writeback을 복제 FF에도 반영하고, v0를 갱신하는 앞선 명령이 남아 있으면 forwarding하거나 이 ALU에 다음 명령을 발행하기 전에 기다려야 합니다. ALU는 마스크를 얻기 위해 VRF의 읽기 포트를 추가 사용하지 않습니다. 한 명령의 모든 LMUL beat는 **동일한** `mask_snapshot`을 사용합니다.
 
-포화 연산의 `vxsat`과 FP의 `fflags[4:0]`은 `commit_o`에서 beat별로 보고하므로 TOP이 sticky CSR에 OR합니다. 현재 FP32 부호·분류·min/max·비교 명령을 지원합니다. FP 산술은 `frm`을 받아 명령마다 정확히 한 번 반올림하도록 구현해야 합니다. TOP이 마지막 beat를 수락하면 architectural `vstart`를 0으로 정리합니다.
+포화 연산의 `vxsat`과 FP의 `fflags[4:0]`은 `commit_o`에서 beat별로 보고하므로 TOP이 sticky CSR에 OR합니다. 현재 FP32 부호·분류·min/max·비교·min/max reduction 명령을 지원합니다. FP 산술은 `frm`을 받아 명령마다 정확히 한 번 반올림하도록 구현해야 합니다. TOP이 마지막 beat를 수락하면 architectural `vstart`를 0으로 정리합니다.
 
 ## VRF 및 writeback 계약
 
