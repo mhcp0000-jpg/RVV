@@ -232,13 +232,16 @@ def main() -> None:
     decoded = sum(row["decode"] == "yes" for row in rows)
     executed = sum(row["execute"] == "yes" for row in rows)
     integrated = sum(bool(row["integration_test"]) for row in rows)
+    target_rows = [row for row in rows if row["profile"] != "FP64 feature conditional"]
+    target_done = sum(row["execute"] == "yes" for row in target_rows)
     text = [
         "# RVV ALU 구현 체크리스트",
         "",
         f"공식 [rv_v opcode 파일]({SOURCE_URL})의 OP-V 인코딩에서 설정 3개와 permutation 34개를 제외한 **280개 인코딩**을 추적합니다.",
-        "전체 VLEN=128 정수·FP 연산 범위를 표시하며, `profile` 열에 RV32IMFC에서 조건부인 FP64 계열을 따로 기록했습니다.",
+        "전체 인코딩을 참고용으로 표시합니다. 현재 RV32IMFC 목표는 정수 SEW64와 FP32를 지원하는 `Zve64f_Zvl128b` 명령 범위이며, D가 필요한 FP64 인코딩은 대상에서 제외합니다.",
         "",
         f"현재 `decode=yes`: **{decoded}/280**, `execute=yes`: **{executed}/280**, TOP 통합 테스트: **{integrated}/280**.",
+        f"현재 목표 범위: **{target_done}/{len(target_rows)}** 실행 구현, 남은 **{len(target_rows)-target_done}**개. FP64 제외 인코딩은 {len(rows)-len(target_rows)}개입니다.",
         "완료는 세 항목과 명세 경계 테스트가 모두 채워진 경우에만 판정합니다.",
         "",
         "| 연산군 | 인코딩 수 |",
