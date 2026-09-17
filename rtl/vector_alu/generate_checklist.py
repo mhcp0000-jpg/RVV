@@ -95,6 +95,12 @@ NEW_FORMS = {
     "vnclipu": {"wv", "wx", "wi"},
     "vnclip": {"wv", "wx", "wi"},
     "vfredmin": {"vs"}, "vfredmax": {"vs"},
+    "vfadd": {"vv", "vf"}, "vfsub": {"vv", "vf"},
+    "vfrsub": {"vf"}, "vfmul": {"vv", "vf"},
+    "vfmadd": {"vv", "vf"}, "vfnmadd": {"vv", "vf"},
+    "vfmsub": {"vv", "vf"}, "vfnmsub": {"vv", "vf"},
+    "vfmacc": {"vv", "vf"}, "vfnmacc": {"vv", "vf"},
+    "vfmsac": {"vv", "vf"}, "vfnmsac": {"vv", "vf"},
 }
 
 
@@ -183,6 +189,10 @@ def main() -> None:
                               "vwmacc", "vwmaccus", "vwmaccsu"} and
                      suffix in NEW_FORMS[base]) or
                     (base in {"vnsrl", "vnsra", "vnclipu", "vnclip"} and
+                     suffix in NEW_FORMS[base]) or
+                    (base in {"vfadd", "vfsub", "vfrsub", "vfmul",
+                              "vfmadd", "vfnmadd", "vfmsub", "vfnmsub",
+                              "vfmacc", "vfnmacc", "vfmsac", "vfnmsac"} and
                      suffix in NEW_FORMS[base]) else ""
             ),
             "spec_corner_test": prior.get("spec_corner_test") or (
@@ -214,7 +224,11 @@ def main() -> None:
                     "vwmulu", "vwmulsu", "vwmul", "vwmaccu", "vwmacc",
                     "vwmaccus", "vwmaccsu"} else
                 "1R wide source pair, m2/mf2, overlap, vxrm, masked vxsat" if base in {
-                    "vnsrl", "vnsra", "vnclipu", "vnclip"} else ""
+                    "vnsrl", "vnsra", "vnclipu", "vnclip"} else
+                "shared fused FP32 path; all forms, frm, NV/OF/UF/NX, m2" if base in {
+                    "vfadd", "vfsub", "vfrsub", "vfmul", "vfmadd",
+                    "vfnmadd", "vfmsub", "vfnmsub", "vfmacc", "vfnmacc",
+                    "vfmsac", "vfnmsac"} else ""
             ),
             "notes": prior.get("notes", ""),
         }

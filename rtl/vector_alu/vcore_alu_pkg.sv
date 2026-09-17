@@ -121,6 +121,18 @@ package vcore_alu_pkg;
     VOP_NCLIP    = 8'd106,
     VOP_FREDMIN  = 8'd107,
     VOP_FREDMAX  = 8'd108,
+    VOP_FADD     = 8'd109,
+    VOP_FSUB     = 8'd110,
+    VOP_FRSUB    = 8'd111,
+    VOP_FMUL     = 8'd112,
+    VOP_FMADD    = 8'd113,
+    VOP_FNMADD   = 8'd114,
+    VOP_FMSUB    = 8'd115,
+    VOP_FNMSUB   = 8'd116,
+    VOP_FMACC    = 8'd117,
+    VOP_FNMACC   = 8'd118,
+    VOP_FMSAC    = 8'd119,
+    VOP_FNMSAC   = 8'd120,
     VOP_INVALID  = 8'hff
   } vop_e;
 
@@ -322,6 +334,16 @@ package vcore_alu_pkg;
            (op == VOP_NCLIPU) || (op == VOP_NCLIP);
   endfunction
 
+  function automatic logic vop_is_fp_arith(input logic [7:0] op);
+    case (op)
+      VOP_FADD, VOP_FSUB, VOP_FRSUB, VOP_FMUL,
+      VOP_FMADD, VOP_FNMADD, VOP_FMSUB, VOP_FNMSUB,
+      VOP_FMACC, VOP_FNMACC, VOP_FMSAC, VOP_FNMSAC:
+        return 1'b1;
+      default: return 1'b0;
+    endcase
+  endfunction
+
   function automatic logic vop_widen_mul_vs2_signed(input logic [7:0] op);
     return (op == VOP_WMULSU) || (op == VOP_WMUL) ||
            (op == VOP_WMACC) || (op == VOP_WMACCUS);
@@ -380,7 +402,10 @@ package vcore_alu_pkg;
       VOP_WMULU, VOP_WMULSU, VOP_WMUL,
       VOP_WMACCU, VOP_WMACC, VOP_WMACCUS, VOP_WMACCSU,
       VOP_NSRL, VOP_NSRA, VOP_NCLIPU, VOP_NCLIP,
-      VOP_FREDMIN, VOP_FREDMAX:
+      VOP_FREDMIN, VOP_FREDMAX,
+      VOP_FADD, VOP_FSUB, VOP_FRSUB, VOP_FMUL,
+      VOP_FMADD, VOP_FNMADD, VOP_FMSUB, VOP_FNMSUB,
+      VOP_FMACC, VOP_FNMACC, VOP_FMSAC, VOP_FNMSAC:
         return 1'b1;
       default: return 1'b0;
     endcase

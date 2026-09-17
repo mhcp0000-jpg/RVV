@@ -17,7 +17,7 @@
 | widening add/sub | narrow source를 2배 EEW로 확장해 64비트씩 add/sub | 2 compute 클록/beat + VRF/WB | 입력 정렬·확장 mux와 SEW64 adder |
 | widening multiply/MAC | narrow source 두 개를 확장해 공통 곱셈 경로에서 계산 | 2 compute 클록/beat + VRF/WB | source 정렬·확장 mux, 64비트 곱셈, 누산 add |
 | narrowing shift/clip | wide source 128비트를 한 클록에 좁은 destination 64비트로 계산 | 2 compute 클록/beat + VRF/WB | wide 가변 shift, `vxrm` 반올림, 포화 compare/mux |
-| FP32 FMA | 아직 미구현. 목표는 FP32 두 lane/클록, 128비트 beat당 두 compute 클록 | 미정 | fused 곱셈·가산·정규화·최종 1회 반올림의 1ns 경로 미검증 |
+| FP32 add/sub/mul/FMA | 공유 fused multiply-add 경로에서 FP32 두 lane/클록 | 2 compute 클록/beat + VRF/WB | 입력 recode, 가수 곱셈·가산·정규화·최종 1회 반올림과 fflags가 한 compute 클록의 조합 경로. 1ns 미검증 |
 
 연산기의 **2 compute 클록**과 명령의 전체 지연은 다릅니다. 1R1W VRF에서
 `.vv`는 source 두 개와 old `vd`를 순차로 읽습니다. LMUL>1일 때 beat도
@@ -34,12 +34,12 @@ WB 후 다음 beat로 넘어가므로, 명령 전체가 2클록 안에 끝나지
    실제 경로 보고서에 따라 합니다.
 3. `vcore_alu_pipe.sv`의 divider에는 65비트 compare/subtract가 있습니다.
    1ns를 넘으면 radix-2 step을 둘 이상의 클록으로 분할해야 합니다.
-4. FP32 FMA는 fused rounding과 `fflags`까지 포함하여 설계해야 합니다.
-   2클록은 목표일 뿐이며, 독립 add/mul을 연결해 두 번 반올림하는 구현은
-   RVV의 fused 명령을 만족하지 않습니다. 구현 시 `vfmul`과 FMA 계열이
-   FP32 가수 곱셈 경로를 공유하고, 부호/가산 피연산자 선택과 최종 반올림을
-   공통으로 사용하도록 설계합니다. 현재 정수 MAC 곱셈식과 FP 가수 곱셈기의
-   물리적 공유는 가정하지 않습니다.
+4. FP32 add/sub/mul/FMA는 같은 HardFloat fused 데이터 경로를 사용합니다.
+   기능 시뮬레이션에서 단일 반올림과 대표 `fflags`를 확인했지만, recode부터
+   fused 연산과 IEEE 변환까지 조합형이므로 1ns를 보장하지 못합니다. 실제
+   타이밍이 초과되면 HardFloat 내부를 파이프라인으로 분할하거나 FP compute
+   지연을 늘려야 하며, 이때 ready/valid와 beat 지연 계약도 수정해야 합니다.
+   정수 MAC 곱셈식과 FP 가수 곱셈기의 물리적 공유는 가정하지 않습니다.
 5. 확장 연산은 source EMUL에 따라 한 128비트 소스의 일부를 선택합니다.
    현재 조합 경로의 정렬 shift가 1ns에 들어오는지 확인하고, 실패하면
    VRF 응답 뒤 정렬 레지스터를 추가하거나 소스 선택을 고정 mux로 바꿉니다.

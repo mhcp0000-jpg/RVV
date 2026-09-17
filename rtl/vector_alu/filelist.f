@@ -1,4 +1,14 @@
 rtl/vector_alu/vcore_alu_pkg.sv
++incdir+rtl/vector_alu/third_party/hardfloat
+rtl/vector_alu/third_party/hardfloat/HardFloat_primitives.v
+rtl/vector_alu/third_party/hardfloat/HardFloat_rawFN.v
+rtl/vector_alu/third_party/hardfloat/HardFloat_specialize.v
+rtl/vector_alu/third_party/hardfloat/isSigNaNRecFN.v
+rtl/vector_alu/third_party/hardfloat/fNToRecFN.v
+rtl/vector_alu/third_party/hardfloat/recFNToFN.v
+rtl/vector_alu/third_party/hardfloat/mulAddRecFN.v
+rtl/vector_alu/vcore_alu_fp32_fma.sv
+rtl/vector_alu/vcore_alu_fp32_slice.sv
 rtl/vector_alu/vcore_alu_slice.sv
 rtl/vector_alu/vcore_alu_narrow_slice.sv
 rtl/vector_alu/vcore_alu_reduce_step.sv

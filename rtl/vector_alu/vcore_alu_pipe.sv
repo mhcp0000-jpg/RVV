@@ -69,10 +69,10 @@ module vcore_alu_pipe #(
   logic [VLEN-1:0] slice_mask_dst;
   logic slice_vxsat;
   logic [4:0] slice_fflags;
-  logic [SLICE_W-1:0] regular_data, narrow_data;
+  logic [SLICE_W-1:0] regular_data, narrow_data, fp_data;
   logic [VLEN-1:0] regular_mask_dst, narrow_wide_src;
   logic regular_vxsat, narrow_vxsat;
-  logic [4:0] regular_fflags;
+  logic [4:0] regular_fflags, fp_fflags;
   logic rsp_slot_ready;
   logic req_fire, finish_fire;
 
@@ -233,10 +233,20 @@ module vcore_alu_pipe #(
     .high_half_i(phase_q == PHASE_HIGH), .ctrl_i(slice_ctrl),
     .data_o(narrow_data), .vxsat_o(narrow_vxsat)
   );
-  assign slice_data = vop_is_narrow(slice_ctrl.op) ? narrow_data : regular_data;
+  vcore_alu_fp32_slice #(.VLEN(VLEN)) u_fp32_slice (
+    .src1_i(slice_src1), .src2_i(slice_src2),
+    .old_data_i(slice_old), .mask_i(slice_mask),
+    .high_half_i(phase_q == PHASE_HIGH), .ctrl_i(slice_ctrl),
+    .data_o(fp_data), .fflags_o(fp_fflags)
+  );
+  assign slice_data = vop_is_narrow(slice_ctrl.op) ? narrow_data :
+                      vop_is_fp_arith(slice_ctrl.op) ? fp_data : regular_data;
   assign slice_mask_dst = regular_mask_dst;
-  assign slice_vxsat = vop_is_narrow(slice_ctrl.op) ? narrow_vxsat : regular_vxsat;
-  assign slice_fflags = vop_is_narrow(slice_ctrl.op) ? '0 : regular_fflags;
+  assign slice_vxsat = vop_is_narrow(slice_ctrl.op) ? narrow_vxsat :
+                       vop_is_fp_arith(slice_ctrl.op) ? 1'b0 : regular_vxsat;
+  assign slice_fflags = vop_is_narrow(slice_ctrl.op) ? '0 :
+                        vop_is_fp_arith(slice_ctrl.op) ? fp_fflags :
+                        regular_fflags;
 
   always_comb begin
     case (ctrl_q.sew)
@@ -394,7 +404,9 @@ module vcore_alu_pipe #(
         end
         illegal_q <= !vop_supported(ctrl_i.op) || !vsew_supported(ctrl_i.sew) ||
                      ((vop_is_widen_integer(ctrl_i.op) ||
-                       vop_is_narrow(ctrl_i.op)) && ctrl_i.sew > VSEW_32);
+                       vop_is_narrow(ctrl_i.op)) && ctrl_i.sew > VSEW_32) ||
+                     (vop_is_fp_arith(ctrl_i.op) &&
+                      (ctrl_i.sew != VSEW_32 || ctrl_i.frm > 3'b100));
         if (vop_is_reduction(ctrl_i.op)) begin
           reduction_src_q <= src2_i[VLEN-1:0];
           reduction_index_q <= '0;

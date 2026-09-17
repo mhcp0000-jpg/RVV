@@ -190,6 +190,12 @@ module vcore_alu_decode #(
         operation_valid &= (funct3 == 3'b010);
     end else if (opf) begin
       case (funct6)
+        6'h00: decoded_o.ctrl.op = VOP_FADD;
+        6'h02: decoded_o.ctrl.op = VOP_FSUB;
+        6'h27: begin
+          decoded_o.ctrl.op = VOP_FRSUB;
+          operation_valid &= (funct3 == 3'b101);
+        end
         6'h04: decoded_o.ctrl.op = VOP_FMIN;
         6'h05: decoded_o.ctrl.op = VOP_FREDMIN;
         6'h06: decoded_o.ctrl.op = VOP_FMAX;
@@ -210,6 +216,15 @@ module vcore_alu_decode #(
           operation_valid &= (funct3 == 3'b101); end
         6'h1f: begin decoded_o.ctrl.op = VOP_FGE;
           operation_valid &= (funct3 == 3'b101); end
+        6'h24: decoded_o.ctrl.op = VOP_FMUL;
+        6'h28: decoded_o.ctrl.op = VOP_FMADD;
+        6'h29: decoded_o.ctrl.op = VOP_FNMADD;
+        6'h2a: decoded_o.ctrl.op = VOP_FMSUB;
+        6'h2b: decoded_o.ctrl.op = VOP_FNMSUB;
+        6'h2c: decoded_o.ctrl.op = VOP_FMACC;
+        6'h2d: decoded_o.ctrl.op = VOP_FNMACC;
+        6'h2e: decoded_o.ctrl.op = VOP_FMSAC;
+        6'h2f: decoded_o.ctrl.op = VOP_FNMSAC;
         default: operation_valid = 1'b0;
       endcase
       // RV32IMFC has F, but no D or Zfh: floating SEW is 32 only.

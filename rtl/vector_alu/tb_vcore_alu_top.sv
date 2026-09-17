@@ -882,6 +882,173 @@ module tb_vcore_alu_top;
     if (mem[20][31:0] !== 32'h7f80_0001 || last_fflags != 0)
       $fatal(1,"inactive FP reduction changed sNaN seed/flags");
 
+    // FP32 add/sub/mul and all eight fused forms, each in .vv and .vf
+    // where encoded. The same two FMA lanes execute every case.
+    begin : fp_arith_sweep
+      int wanted;
+      logic [31:0] expected_bits;
+      wanted = 173;
+      mem[8] = {4{32'h4000_0000}};  // 2.0
+      mem[4] = {4{32'h4040_0000}};  // 3.0
+      cmd.scalar = 32'h4040_0000;
+      cmd.sew = VSEW_32;
+      cmd.vlmul = 3'b000;
+      cmd.vl = 4;
+      cmd.mask_snapshot = '1;
+      cmd.frm = 3'b000;
+      for (int opcode=0; opcode<12; opcode++) begin
+        int funct6;
+        case (opcode)
+          0: funct6=32'h00;
+          1: funct6=32'h02;
+          2: funct6=32'h27;
+          3: funct6=32'h24;
+          default: funct6=32'h28+opcode-4;
+        endcase
+        case (funct6)
+          32'h00: expected_bits=32'h40a0_0000; // 2+3=5
+          32'h02: expected_bits=32'hbf80_0000; // 2-3=-1
+          32'h27: expected_bits=32'h3f80_0000; // 3-2=1
+          32'h24: expected_bits=32'h40c0_0000; // 2*3=6
+          32'h28: expected_bits=32'h4188_0000; // 3*5+2=17
+          32'h29: expected_bits=32'hc188_0000; // -3*5-2=-17
+          32'h2a: expected_bits=32'h4150_0000; // 3*5-2=13
+          32'h2b: expected_bits=32'hc150_0000; // -3*5+2=-13
+          32'h2c: expected_bits=32'h4130_0000; // 3*2+5=11
+          32'h2d: expected_bits=32'hc130_0000; // -3*2-5=-11
+          32'h2e: expected_bits=32'h3f80_0000; // 3*2-5=1
+          default: expected_bits=32'hbf80_0000; // -3*2+5=-1
+        endcase
+        for (int form=0; form<2; form++) begin
+          if (funct6!=32'h27 || form==1) begin
+            mem[20] = {4{32'h40a0_0000}}; // 5.0 destructive input
+            cmd.inst = {6'(funct6),1'b1,5'd8,
+                        (form==0 ? 5'd4 : 5'd3),
+                        (form==0 ? 3'b001 : 3'b101),5'd20,7'h57};
+            cmd.tag = 16'(32'he0+wanted-173);
+            send_command();
+            wanted++;
+            await_commits(wanted);
+            if (last_fflags != 0 || illegal_count != 8)
+              $fatal(1,"FP arithmetic flags/illegal funct6=%h form=%0d flags=%h",
+                     funct6,form,last_fflags);
+            for (int lane=0; lane<4; lane++)
+              if (mem[20][lane*32 +: 32] !== expected_bits)
+                $fatal(1,"FP arithmetic funct6=%h form=%0d lane=%0d got=%h expected=%h",
+                       funct6,form,lane,mem[20][lane*32 +: 32],expected_bits);
+          end
+        end
+      end
+      if (wanted != 196) $fatal(1,"FP arithmetic encoding sweep incomplete");
+    end
+
+    // A fused result that would become zero if the product were rounded first.
+    mem[8] = {4{32'h3f80_0001}}; // 1+2^-23
+    mem[4] = {4{32'h3f7f_fffe}}; // 1-2^-23
+    mem[20] = {4{32'hbf80_0000}}; // -1
+    cmd.inst = {6'h2c,1'b1,5'd8,5'd4,3'b001,5'd20,7'h57};
+    cmd.tag = 16'hf8;
+    send_command();
+    await_commits(197);
+    if (mem[20] !== {4{32'ha880_0000}} || last_fflags != 0)
+      $fatal(1,"FP FMA lost fused precision %h flags=%h",mem[20],last_fflags);
+
+    // Dynamic frm changes the rounded result and NX flag.
+    mem[8] = {4{32'h3f80_0000}};
+    mem[4] = {4{32'h3380_0000}}; // half an ulp at 1.0
+    cmd.inst = {6'h00,1'b1,5'd8,5'd4,3'b001,5'd20,7'h57};
+    for (int mode=0; mode<5; mode++) begin
+      cmd.frm = 3'(mode);
+      cmd.tag = 16'(32'hf9+mode);
+      send_command();
+      await_commits(198+mode);
+      if (mem[20][31:0] !== ((mode==3 || mode==4) ?
+                             32'h3f80_0001 : 32'h3f80_0000) ||
+          last_fflags != 5'b00001)
+        $fatal(1,"FP frm/NX mismatch mode=%0d data=%h flags=%h",
+               mode,mem[20][31:0],last_fflags);
+    end
+
+    // Invalid, overflow, underflow, and exact subnormal results.
+    cmd.frm = 3'b000;
+    cmd.mask_snapshot = '1;
+    cmd.inst = {6'h00,1'b1,5'd8,5'd4,3'b001,5'd20,7'h57};
+    mem[8] = {4{32'h7f80_0000}}; // +infinity
+    mem[4] = {4{32'hff80_0000}}; // -infinity
+    cmd.tag = 16'hfe;
+    send_command();
+    await_commits(203);
+    if (mem[20] !== {4{32'h7fc0_0000}} || last_fflags != 5'h10)
+      $fatal(1,"FP inf-inf invalid mismatch %h flags=%h",mem[20],last_fflags);
+
+    mem[8] = {4{32'h7f7f_ffff}};
+    mem[4] = {4{32'h7f7f_ffff}};
+    cmd.tag = 16'hff;
+    send_command();
+    await_commits(204);
+    if (mem[20] !== {4{32'h7f80_0000}} || last_fflags != 5'h05)
+      $fatal(1,"FP overflow mismatch %h flags=%h",mem[20],last_fflags);
+
+    mem[8] = {4{32'h0000_0001}}; // smallest subnormal
+    mem[4] = {4{32'h3f00_0000}}; // 0.5
+    cmd.inst = {6'h24,1'b1,5'd8,5'd4,3'b001,5'd20,7'h57};
+    cmd.tag = 16'h100;
+    send_command();
+    await_commits(205);
+    if (mem[20] !== '0 || last_fflags != 5'h03)
+      $fatal(1,"FP underflow mismatch %h flags=%h",mem[20],last_fflags);
+
+    mem[8] = {4{32'h0080_0000}}; // smallest normal
+    cmd.tag = 16'h101;
+    send_command();
+    await_commits(206);
+    if (mem[20] !== {4{32'h0040_0000}} || last_fflags != 0)
+      $fatal(1,"FP exact subnormal mismatch %h flags=%h",mem[20],last_fflags);
+
+    // Masked invalid lanes must not contribute fflags; destination stays old.
+    mem[8] = {4{32'h7f80_0000}};
+    mem[4] = '0;
+    mem[20] = {4{32'h3f80_0000}};
+    cmd.inst = {6'h24,1'b0,5'd8,5'd4,3'b001,5'd20,7'h57};
+    cmd.mask_snapshot = '0;
+    cmd.vma = 0;
+    cmd.tag = 16'h102;
+    send_command();
+    await_commits(207);
+    if (mem[20] !== {4{32'h3f80_0000}} || last_fflags != 0)
+      $fatal(1,"masked FP invalid lane changed data/flags");
+
+    // Two destination beats consume aligned LMUL=2 source groups.
+    mem[8] = {4{32'h4000_0000}};
+    mem[9] = {4{32'h4080_0000}};
+    mem[4] = {4{32'h4040_0000}};
+    mem[5] = {4{32'h40a0_0000}};
+    mem[20] = '0;
+    mem[21] = '0;
+    cmd.inst = {6'h2c,1'b1,5'd8,5'd4,3'b001,5'd20,7'h57};
+    cmd.vlmul = 3'b001;
+    cmd.vl = 8;
+    cmd.mask_snapshot = '1;
+    cmd.tag = 16'h103;
+    send_command();
+    await_commits(209);
+    if (mem[20] !== {4{32'h40c0_0000}} || // 2*3=6
+        mem[21] !== {4{32'h41a0_0000}} || // 4*5=20
+        last_fflags != 0)
+      $fatal(1,"FP FMA LMUL=2 mismatch %h %h",mem[20],mem[21]);
+
+    // Multiplication must preserve the sign of an exact zero product.
+    mem[8] = {4{32'h8000_0000}};
+    mem[4] = {4{32'h4000_0000}};
+    cmd.inst = {6'h24,1'b1,5'd8,5'd4,3'b001,5'd20,7'h57};
+    cmd.vlmul = 3'b000;
+    cmd.vl = 4;
+    cmd.tag = 16'h104;
+    send_command();
+    await_commits(210);
+    if (mem[20] !== {4{32'h8000_0000}} || last_fflags != 0)
+      $fatal(1,"FP multiply signed zero mismatch %h flags=%h",mem[20],last_fflags);
+
     $display("tb_vcore_alu_top PASS");
     $finish;
   end
