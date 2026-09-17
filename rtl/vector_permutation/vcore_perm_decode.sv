@@ -58,8 +58,9 @@ module vcore_perm_decode #(
         decoded_o.ctrl.op = VPOP_VRGATHER;
         unique case (funct3)
           3'b000:  decoded_o.form = VSRC_VV;
-          3'b100:  decoded_o.form = VSRC_VX;
-          3'b011:  begin decoded_o.form = VSRC_VI; decoded_o.scalar = {27'd0, vs1_f}; end // uimm5
+          3'b100:  begin decoded_o.form = VSRC_VX; decoded_o.ctrl.idx_from_scalar = 1'b1; end
+          3'b011:  begin decoded_o.form = VSRC_VI; decoded_o.scalar = {27'd0, vs1_f};
+                         decoded_o.ctrl.idx_from_scalar = 1'b1; end // uimm5
           default: operation_valid = 1'b0;
         endcase
       end
@@ -88,18 +89,23 @@ module vcore_perm_decode #(
             decoded_o.ctrl.op = VPOP_VCOMPRESS; decoded_o.form = VSRC_VV;
             operation_valid &= vm;
           end
+          // vmv.v.* is vmerge with vm=1, and the encoding fixes vs2 to v0;
+          // a non-zero vs2 there is a reserved encoding.
           3'b000: begin
             decoded_o.form = VSRC_VV;
             decoded_o.ctrl.op = vm ? VPOP_VMV_V : VPOP_VMERGE;
+            if (vm && (vs2_f != 5'd0)) operation_valid = 1'b0;
           end
           3'b100, 3'b101: begin // .vx / vfmv.v.f,vfmerge.vfm(.vf) share the .vx datapath
             decoded_o.form = VSRC_VX;
             decoded_o.ctrl.op = vm ? VPOP_VMV_V : VPOP_VMERGE;
+            if (vm && (vs2_f != 5'd0)) operation_valid = 1'b0;
           end
           3'b011: begin // simm5
             decoded_o.form = VSRC_VI;
             decoded_o.scalar = {{27{vs1_f[4]}}, vs1_f};
             decoded_o.ctrl.op = vm ? VPOP_VMV_V : VPOP_VMERGE;
+            if (vm && (vs2_f != 5'd0)) operation_valid = 1'b0;
           end
           default: operation_valid = 1'b0;
         endcase
@@ -110,15 +116,22 @@ module vcore_perm_decode #(
             if (vs1_f == 5'h00) begin
               decoded_o.ctrl.op = VPOP_VMV_X_S;
               decoded_o.ctrl.is_fp = (funct3 == 3'b001); // 001=OPFVV(vfmv.f.s)->FPR, 010=OPMVV(vmv.x.s)->GPR
+              operation_valid &= vm; // masked vmv.x.s/vfmv.f.s is reserved
             end else operation_valid = 1'b0; // vcpop.m / vfirst.m -> different cluster
           end
-          3'b110, 3'b101: begin decoded_o.ctrl.op = VPOP_VMV_S_X; decoded_o.form = VSRC_VX; end
+          3'b110, 3'b101: begin
+            decoded_o.ctrl.op = VPOP_VMV_S_X; decoded_o.form = VSRC_VX;
+            // masked form is reserved; the encoding also fixes vs2 to v0
+            operation_valid &= vm;
+            if (vs2_f != 5'd0) operation_valid = 1'b0;
+          end
           default: operation_valid = 1'b0;
         endcase
       end
       6'h27: begin // whole-register move: vs1 field encodes nreg-1 (0/1/3/7)
         if (funct3 == 3'b011) begin
           decoded_o.ctrl.op = VPOP_VMVNR;
+          operation_valid &= vm; // vmv<nr>r.v is unmasked by encoding
           decoded_o.beats = 4'd1; // safe default so an invalid vs1_f below can't leave beats==0
           unique case (vs1_f)
             5'd0: decoded_o.beats = 4'd1;
@@ -178,7 +191,16 @@ module vcore_perm_decode #(
       // only the sequencer's iteration count collapses to a single beat for them.
       decoded_o.beats = vpop_single_beat(decoded_o.ctrl.op) ? 4'd1 : beats;
       max_elements = (sew_bits == 0) ? 0 : ((VLEN / sew_bits) * int'(beats)) / fraction_div;
+      // VLMAX must reach the datapath: a fractional LMUL still occupies one
+      // whole register, so group_regs alone cannot express it and the
+      // "index >= VLMAX returns 0" rule would use the wrong bound.
+      decoded_o.ctrl.vlmax = 17'(max_elements);
       if (max_elements == 0 || int'(cmd_i.vl) > max_elements || cmd_i.vill)
+        operation_valid = 1'b0;
+
+      // RVV 1.0 15.1/15.2/16.5: these raise an illegal-instruction exception
+      // on a non-zero vstart rather than resuming mid-way.
+      if (vpop_requires_vstart_zero(decoded_o.ctrl.op) && (cmd_i.vstart != 17'd0))
         operation_valid = 1'b0;
       // vd/vs2/vs1 must each be aligned to a multiple of beats ONLY when that
       // operand actually groups with LMUL. viota's vs2, vcompress's vs1 and
@@ -186,7 +208,13 @@ module vcore_perm_decode #(
       // vpop_vs2_is_mask_src/vpop_vs1_is_mask_src/vpop_is_mask_dest) and are
       // exempt -- otherwise, e.g., "viota.m v4, v1" at LMUL=2 (vs2=1) would
       // be wrongly rejected even though v1 is never grouped.
-      if (beats > 1) begin
+      // RVV 1.0 16.1: "The integer scalar read/write instructions ... ignore
+      // LMUL and vector register groups." vmv.x.s writes a scalar rd, and
+      // vmv.s.x touches exactly one vector register, so neither operand is
+      // subject to the EMUL alignment rule. vmsbf/vmsof/vmsif are likewise
+      // single-register on both sides; they were already exempt through the
+      // mask-operand tests below, these two were not.
+      if ((beats > 1) && !vpop_single_beat(decoded_o.ctrl.op)) begin
         if ((!vpop_is_mask_dest(decoded_o.ctrl.op) && (int'(decoded_o.vd) % int'(beats)) != 0) ||
             (!vpop_vs2_is_mask_src(decoded_o.ctrl.op) && (int'(decoded_o.vs2) % int'(beats)) != 0) ||
             (decoded_o.form == VSRC_VV && !vpop_vs1_is_mask_src(decoded_o.ctrl.op) &&
@@ -207,8 +235,12 @@ module vcore_perm_decode #(
       // so vd must not alias any register vs2 (or the grouping vs1 index/
       // compress mask-select) will be read from during the same instruction.
       unique case (decoded_o.ctrl.op)
+        // Only vslideup and vslide1up carry the non-overlap constraint
+        // (RVV 1.0 16.3.1 / 16.3.3). vslidedown and vslide1down read towards
+        // higher indices and are explicitly allowed to work in place, so
+        // rejecting them would turn legal code into an illegal instruction.
         VPOP_VRGATHER, VPOP_VRGATHEREI16,
-        VPOP_VSLIDEUP, VPOP_VSLIDEDOWN, VPOP_VSLIDE1UP, VPOP_VSLIDE1DOWN: begin
+        VPOP_VSLIDEUP, VPOP_VSLIDE1UP: begin
           if (regs_overlap(decoded_o.vd, int'(beats), decoded_o.vs2, int'(beats)))
             operation_valid = 1'b0;
           if (decoded_o.form == VSRC_VV) begin
@@ -225,6 +257,21 @@ module vcore_perm_decode #(
               regs_overlap(decoded_o.vd, int'(beats), decoded_o.vs1, 1))
             operation_valid = 1'b0;
         end
+        // viota.m and the vmsbf/vmsof/vmsif scans: "The destination register
+        // group cannot overlap the source register and, if masked, cannot
+        // overlap the mask register (v0)." (RVV 1.0 15.1 / 15.2). viota's
+        // destination groups with LMUL; the scans' destination is a single
+        // mask register. Their vs2 is always one non-grouping register.
+        VPOP_VIOTA, VPOP_VMSBF, VPOP_VMSOF, VPOP_VMSIF: begin
+          if (regs_overlap(decoded_o.vd,
+                           vpop_is_mask_dest(decoded_o.ctrl.op) ? 1 : int'(beats),
+                           decoded_o.vs2, 1))
+            operation_valid = 1'b0;
+          if (!vm && regs_overlap(decoded_o.vd,
+                                  vpop_is_mask_dest(decoded_o.ctrl.op) ? 1 : int'(beats),
+                                  5'd0, 1))
+            operation_valid = 1'b0;
+        end
         default: ;
       endcase
     end else begin
@@ -233,6 +280,12 @@ module vcore_perm_decode #(
       if (int'(decoded_o.vd) % int'(decoded_o.beats) != 0 ||
           int'(decoded_o.vs2) % int'(decoded_o.beats) != 0)
         operation_valid = 1'b0;
+      // RVV 1.0 16.6: the usual "nothing written when vstart >= vl" does not
+      // apply here; the bound is evl = NREG * VLEN / SEW instead. Carried in
+      // ctrl.vlmax. An unusable SEW cannot gate a vtype-independent move, so
+      // it degenerates to "always write".
+      decoded_o.ctrl.vlmax = (sew_bits == 0) ? 17'h1ffff
+                           : 17'(int'(decoded_o.beats) * (VLEN / sew_bits));
     end
 
     decoded_o.illegal = !operation_valid;

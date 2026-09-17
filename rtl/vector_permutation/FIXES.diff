@@ -1,0 +1,499 @@
+--- rtl_orig/vcore_perm_core.sv	2026-09-17 02:34:55.841465545 +0000
++++ rtl/vcore_perm_core.sv	2026-09-17 02:51:23.663093002 +0000
+@@ -53,6 +53,9 @@
+   import vcore_perm_pkg::*;
+   localparam int unsigned MASK_IDX_W = $clog2(VLEN);
+   localparam int unsigned GROUP_W = MAXLMUL*VLEN;
++  // EEW=16 index slots the group buffer can hold; kept as a localparam so
++  // the width cast below has a plain constant to widen (Verilator WIDTHEXPAND).
++  localparam int unsigned GROUP_IDX_SLOTS = GROUP_W/16;
+ 
+   typedef struct packed {
+     logic [63:0] data;
+@@ -102,6 +105,8 @@
+     lane_result_t ret;
+     logic [63:0] computed;
+     logic        computed_bit;
++    logic        mask_bit;            // v0 for this element: activity, not a result
++    logic        slide_up_below_offset;
+     logic [63:0] idx, gidx;
+     logic [63:0] group_size;
+     logic        in_range;
+@@ -111,15 +116,26 @@
+     int k, cnt, src_pos;
+     logic found_before, mbit_here;
+ 
++    mask_bit = mask[global_index[MASK_IDX_W-1:0]];
+     ret.data = fld_get(dst_old, i, EEW);
+-    ret.mbit = mask[global_index[MASK_IDX_W-1:0]];
++    // Default for a mask destination is the OLD destination bit, so an
++    // element the policy chain declines to write stays undisturbed. (It used
++    // to default to the v0 bit, which would have written the mask itself.)
++    ret.mbit = dst_old[global_index[MASK_IDX_W-1:0]];
+     computed = '0;
+     computed_bit = 1'b0;
+-    group_size = 64'(ctrl.group_regs) * 64'(N);
++    // VLMAX, not group_regs*N: a fractional LMUL occupies a whole register
++    // but only VLMAX of its elements exist (RVV 1.0 16.4 / 16.3.2).
++    group_size = 64'(ctrl.vlmax);
++    slide_up_below_offset = (ctrl.op == VPOP_VSLIDEUP) &&
++                            (64'(global_index) < 64'(scalar));
+ 
+     unique case (ctrl.op)
+       VPOP_VRGATHER: begin
+-        idx = fld_get(src1, i, EEW);
++        // .vx/.vi take the index from the raw scalar: RVV 1.0 16.4 says it is
++        // zero-extended to XLEN and NOT truncated to SEW, so the SEW-wide
++        // broadcast sitting in src1 cannot be used for it.
++        idx = ctrl.idx_from_scalar ? {32'd0, scalar} : fld_get(src1, i, EEW);
+         in_range = idx < group_size;
+         idx_safe = in_range ? int'(idx) : 0;
+         computed = in_range ? fld_get_wide(src2_group, idx_safe, EEW) : 64'd0;
+@@ -132,7 +148,7 @@
+         // the same way it does for plain vrgather, just at a different EEW.
+         // Bounds-checked separately since the index buffer (GROUP_W/16
+         // slots) can be narrower than the 0..127 global_index range.
+-        gi16_in_range = (64'(global_index) < 64'(GROUP_W/16));
++        gi16_in_range = (64'(global_index) < 64'(GROUP_IDX_SLOTS));
+         gi16_safe = gi16_in_range ? int'(global_index) : 0;
+         idx = gi16_in_range ? fld_get_wide(src1_idx_group, gi16_safe, 16) : 64'hffff_ffff_ffff_ffff;
+         in_range = idx < group_size;
+@@ -183,9 +199,11 @@
+         // src2_group holds the full vs2 source group. Destination position
+         // is global_index, so we search for the global_index-th set bit
+         // across the WHOLE group's mask (bound VLEN, gated by group_size).
++        // RVV 1.0 16.5 packs "the first vl elements of vs2": mask bits at or
++        // past vl select nothing, so the scan stops at vl, not at VLMAX.
+         cnt = 0; src_pos = VLEN;
+         for (k = 0; k < VLEN; k++)
+-          if (64'(k) < group_size && src1[k]) begin
++          if (64'(k) < 64'(ctrl.vl) && src1[k]) begin
+             if (cnt == int'(global_index)) src_pos = k;
+             cnt++;
+           end
+@@ -194,7 +212,7 @@
+         computed = in_range ? fld_get_wide(src2_group, idx_safe, EEW) : fld_get(dst_old, i, EEW);
+       end
+ 
+-      VPOP_VMERGE: computed = ret.mbit ? fld_get(src1, i, EEW) : fld_get(src2, i, EEW);
++      VPOP_VMERGE: computed = mask_bit ? fld_get(src1, i, EEW) : fld_get(src2, i, EEW);
+       VPOP_VMV_V:  computed = fld_get(src1, i, EEW);
+ 
+       VPOP_VIOTA: begin
+@@ -203,9 +221,13 @@
+         // so the prefix count must scan from absolute bit 0, not this beat's
+         // local element_base, even though element_base itself does advance
+         // (viota's destination groups with LMUL).
++        // RVV 1.0 15.2: "This instruction can be masked, in which case only
++        // the enabled elements contribute to the sum." Inactive elements are
++        // skipped by the accumulator even though they still occupy a slot.
+         cnt = 0;
+         for (k = 0; k < VLEN; k++)
+-          if (64'(k) < 64'(global_index) && src2[k]) cnt++;
++          if (64'(k) < 64'(global_index) && 64'(k) < 64'(ctrl.vl) &&
++              (ctrl.vm || mask[k]) && src2[k]) cnt++;
+         computed = 64'(cnt);
+       end
+       VPOP_VID: computed = 64'(global_index);
+@@ -213,9 +235,12 @@
+       VPOP_VMSBF, VPOP_VMSOF, VPOP_VMSIF: begin
+         // Dispatched with EEW=1, N=VLEN, element_base=0 (vpop_single_beat),
+         // so global_index==i and this scan is already absolute.
++        // RVV 1.0 15.1: "before the first ACTIVE source element that is a 1".
++        // A set bit in an inactive element must not terminate the run.
+         found_before = 1'b0;
+         for (k = 0; k < i; k++)
+-          if (src2[k]) found_before = 1'b1;
++          if (64'(k) < 64'(ctrl.vl) && (ctrl.vm || mask[k]) && src2[k])
++            found_before = 1'b1;
+         mbit_here = src2[i];
+         unique case (ctrl.op)
+           VPOP_VMSBF: computed_bit = !found_before && !mbit_here;
+@@ -229,15 +254,25 @@
+     endcase
+ 
+     // -- vstart / tail / predicate policy, mirrors vcore_alu_slice execute_lane --
+-    if (global_index < ctrl.vstart) begin
++    if (ctrl.vstart >= ctrl.vl) begin
++      // RVV 1.0 5.4: "When vstart >= vl, there are no body elements, and no
++      // elements are updated in any destination vector register group,
++      // including that no tail elements are updated with agnostic values."
++      // Covers vl = 0 as well. (vmv.x.s/vfmv.f.s are exempt and never reach
++      // this function -- they are handled outside the lane loop.)
++    end else if (global_index < ctrl.vstart) begin
+       // prestart: element left undisturbed (ret already defaults to dst_old)
+     end else if ((global_index >= ctrl.vl) ||
+                  (ctrl.op == VPOP_VCOMPRESS && int'(global_index) >= total_count)) begin
+       if (vpop_is_mask_dest(ctrl.op)) ret.mbit = 1'b1; // mask-dest tail is agnostic
+       else if (ctrl.vta) ret.data = '1;
++    end else if (slide_up_below_offset) begin
++      // RVV 1.0 16.3.1 tabulates 0 <= i < max(vstart, OFFSET) as Unchanged.
++      // That is stronger than the inactive-element policy, so an agnostic
++      // fill must not reach this region even when vma = 1.
+     end else if (vpop_uses_v0_selector(ctrl.op)) begin
+       ret.data = computed;
+-    end else if (!ctrl.vm && !ret.mbit && vpop_uses_predicate(ctrl.op)) begin
++    end else if (!ctrl.vm && !mask_bit && vpop_uses_predicate(ctrl.op)) begin
+       if (vpop_is_mask_dest(ctrl.op)) begin
+         if (ctrl.vma) ret.mbit = 1'b1;
+       end else if (ctrl.vma) ret.data = '1;
+@@ -265,7 +300,10 @@
+ 
+     if (!illegal_o) begin
+       unique case (ctrl_i.op)
+-        VPOP_VMVNR: data_o = src2_i; // whole-register bypass: no vl/vtype/mask, no grouping needed
++        // Whole-register bypass: no vl/vtype/mask, no grouping. The one rule
++        // that does apply is RVV 1.0 16.6 -- nothing is written when
++        // vstart >= evl, with evl = NREG * VLEN / SEW carried in ctrl.vlmax.
++        VPOP_VMVNR: data_o = (ctrl_i.vstart < ctrl_i.vlmax) ? src2_i : dst_old_i;
+ 
+         VPOP_VMV_X_S: begin // single-beat (vpop_single_beat): vs2 never groups for this op
+           is_scalar_o = 1'b1;
+@@ -305,7 +343,7 @@
+           unique case (ctrl_i.sew)
+             VSEW_8: begin
+               for (int k = 0; k < VLEN; k++)
+-                if (64'(k) < 64'(ctrl_i.group_regs)*64'(VLEN/8) && src1_i[k]) total_count++;
++                if (64'(k) < 64'(ctrl_i.vl) && src1_i[k]) total_count++;
+               for (int i = 0; i < VLEN/8; i++) begin
+                 global_index = ctrl_i.element_base + 17'(i);
+                 lane = perm_lane(src2_i,src1_i,src2_group_i,src1_idx_group_i,dst_old_i,mask_i,scalar_i,i,8,VLEN/8,
+@@ -316,7 +354,7 @@
+             end
+             VSEW_16: begin
+               for (int k = 0; k < VLEN; k++)
+-                if (64'(k) < 64'(ctrl_i.group_regs)*64'(VLEN/16) && src1_i[k]) total_count++;
++                if (64'(k) < 64'(ctrl_i.vl) && src1_i[k]) total_count++;
+               for (int i = 0; i < VLEN/16; i++) begin
+                 global_index = ctrl_i.element_base + 17'(i);
+                 lane = perm_lane(src2_i,src1_i,src2_group_i,src1_idx_group_i,dst_old_i,mask_i,scalar_i,i,16,VLEN/16,
+@@ -327,7 +365,7 @@
+             end
+             VSEW_32: begin
+               for (int k = 0; k < VLEN; k++)
+-                if (64'(k) < 64'(ctrl_i.group_regs)*64'(VLEN/32) && src1_i[k]) total_count++;
++                if (64'(k) < 64'(ctrl_i.vl) && src1_i[k]) total_count++;
+               for (int i = 0; i < VLEN/32; i++) begin
+                 global_index = ctrl_i.element_base + 17'(i);
+                 lane = perm_lane(src2_i,src1_i,src2_group_i,src1_idx_group_i,dst_old_i,mask_i,scalar_i,i,32,VLEN/32,
+@@ -338,7 +376,7 @@
+             end
+             VSEW_64: begin
+               for (int k = 0; k < VLEN; k++)
+-                if (64'(k) < 64'(ctrl_i.group_regs)*64'(VLEN/64) && src1_i[k]) total_count++;
++                if (64'(k) < 64'(ctrl_i.vl) && src1_i[k]) total_count++;
+               for (int i = 0; i < VLEN/64; i++) begin
+                 global_index = ctrl_i.element_base + 17'(i);
+                 lane = perm_lane(src2_i,src1_i,src2_group_i,src1_idx_group_i,dst_old_i,mask_i,scalar_i,i,64,VLEN/64,
+--- rtl_orig/vcore_perm_decode.sv	2026-09-17 02:34:55.841496808 +0000
++++ rtl/vcore_perm_decode.sv	2026-09-17 05:34:04.188635729 +0000
+@@ -58,8 +58,9 @@
+         decoded_o.ctrl.op = VPOP_VRGATHER;
+         unique case (funct3)
+           3'b000:  decoded_o.form = VSRC_VV;
+-          3'b100:  decoded_o.form = VSRC_VX;
+-          3'b011:  begin decoded_o.form = VSRC_VI; decoded_o.scalar = {27'd0, vs1_f}; end // uimm5
++          3'b100:  begin decoded_o.form = VSRC_VX; decoded_o.ctrl.idx_from_scalar = 1'b1; end
++          3'b011:  begin decoded_o.form = VSRC_VI; decoded_o.scalar = {27'd0, vs1_f};
++                         decoded_o.ctrl.idx_from_scalar = 1'b1; end // uimm5
+           default: operation_valid = 1'b0;
+         endcase
+       end
+@@ -88,18 +89,23 @@
+             decoded_o.ctrl.op = VPOP_VCOMPRESS; decoded_o.form = VSRC_VV;
+             operation_valid &= vm;
+           end
++          // vmv.v.* is vmerge with vm=1, and the encoding fixes vs2 to v0;
++          // a non-zero vs2 there is a reserved encoding.
+           3'b000: begin
+             decoded_o.form = VSRC_VV;
+             decoded_o.ctrl.op = vm ? VPOP_VMV_V : VPOP_VMERGE;
++            if (vm && (vs2_f != 5'd0)) operation_valid = 1'b0;
+           end
+           3'b100, 3'b101: begin // .vx / vfmv.v.f,vfmerge.vfm(.vf) share the .vx datapath
+             decoded_o.form = VSRC_VX;
+             decoded_o.ctrl.op = vm ? VPOP_VMV_V : VPOP_VMERGE;
++            if (vm && (vs2_f != 5'd0)) operation_valid = 1'b0;
+           end
+           3'b011: begin // simm5
+             decoded_o.form = VSRC_VI;
+             decoded_o.scalar = {{27{vs1_f[4]}}, vs1_f};
+             decoded_o.ctrl.op = vm ? VPOP_VMV_V : VPOP_VMERGE;
++            if (vm && (vs2_f != 5'd0)) operation_valid = 1'b0;
+           end
+           default: operation_valid = 1'b0;
+         endcase
+@@ -110,15 +116,22 @@
+             if (vs1_f == 5'h00) begin
+               decoded_o.ctrl.op = VPOP_VMV_X_S;
+               decoded_o.ctrl.is_fp = (funct3 == 3'b001); // 001=OPFVV(vfmv.f.s)->FPR, 010=OPMVV(vmv.x.s)->GPR
++              operation_valid &= vm; // masked vmv.x.s/vfmv.f.s is reserved
+             end else operation_valid = 1'b0; // vcpop.m / vfirst.m -> different cluster
+           end
+-          3'b110, 3'b101: begin decoded_o.ctrl.op = VPOP_VMV_S_X; decoded_o.form = VSRC_VX; end
++          3'b110, 3'b101: begin
++            decoded_o.ctrl.op = VPOP_VMV_S_X; decoded_o.form = VSRC_VX;
++            // masked form is reserved; the encoding also fixes vs2 to v0
++            operation_valid &= vm;
++            if (vs2_f != 5'd0) operation_valid = 1'b0;
++          end
+           default: operation_valid = 1'b0;
+         endcase
+       end
+       6'h27: begin // whole-register move: vs1 field encodes nreg-1 (0/1/3/7)
+         if (funct3 == 3'b011) begin
+           decoded_o.ctrl.op = VPOP_VMVNR;
++          operation_valid &= vm; // vmv<nr>r.v is unmasked by encoding
+           decoded_o.beats = 4'd1; // safe default so an invalid vs1_f below can't leave beats==0
+           unique case (vs1_f)
+             5'd0: decoded_o.beats = 4'd1;
+@@ -178,15 +191,30 @@
+       // only the sequencer's iteration count collapses to a single beat for them.
+       decoded_o.beats = vpop_single_beat(decoded_o.ctrl.op) ? 4'd1 : beats;
+       max_elements = (sew_bits == 0) ? 0 : ((VLEN / sew_bits) * int'(beats)) / fraction_div;
++      // VLMAX must reach the datapath: a fractional LMUL still occupies one
++      // whole register, so group_regs alone cannot express it and the
++      // "index >= VLMAX returns 0" rule would use the wrong bound.
++      decoded_o.ctrl.vlmax = 17'(max_elements);
+       if (max_elements == 0 || int'(cmd_i.vl) > max_elements || cmd_i.vill)
+         operation_valid = 1'b0;
++
++      // RVV 1.0 15.1/15.2/16.5: these raise an illegal-instruction exception
++      // on a non-zero vstart rather than resuming mid-way.
++      if (vpop_requires_vstart_zero(decoded_o.ctrl.op) && (cmd_i.vstart != 17'd0))
++        operation_valid = 1'b0;
+       // vd/vs2/vs1 must each be aligned to a multiple of beats ONLY when that
+       // operand actually groups with LMUL. viota's vs2, vcompress's vs1 and
+       // vmsbf/vmsof/vmsif's vd are single non-grouping mask registers (see
+       // vpop_vs2_is_mask_src/vpop_vs1_is_mask_src/vpop_is_mask_dest) and are
+       // exempt -- otherwise, e.g., "viota.m v4, v1" at LMUL=2 (vs2=1) would
+       // be wrongly rejected even though v1 is never grouped.
+-      if (beats > 1) begin
++      // RVV 1.0 16.1: "The integer scalar read/write instructions ... ignore
++      // LMUL and vector register groups." vmv.x.s writes a scalar rd, and
++      // vmv.s.x touches exactly one vector register, so neither operand is
++      // subject to the EMUL alignment rule. vmsbf/vmsof/vmsif are likewise
++      // single-register on both sides; they were already exempt through the
++      // mask-operand tests below, these two were not.
++      if ((beats > 1) && !vpop_single_beat(decoded_o.ctrl.op)) begin
+         if ((!vpop_is_mask_dest(decoded_o.ctrl.op) && (int'(decoded_o.vd) % int'(beats)) != 0) ||
+             (!vpop_vs2_is_mask_src(decoded_o.ctrl.op) && (int'(decoded_o.vs2) % int'(beats)) != 0) ||
+             (decoded_o.form == VSRC_VV && !vpop_vs1_is_mask_src(decoded_o.ctrl.op) &&
+@@ -207,8 +235,12 @@
+       // so vd must not alias any register vs2 (or the grouping vs1 index/
+       // compress mask-select) will be read from during the same instruction.
+       unique case (decoded_o.ctrl.op)
++        // Only vslideup and vslide1up carry the non-overlap constraint
++        // (RVV 1.0 16.3.1 / 16.3.3). vslidedown and vslide1down read towards
++        // higher indices and are explicitly allowed to work in place, so
++        // rejecting them would turn legal code into an illegal instruction.
+         VPOP_VRGATHER, VPOP_VRGATHEREI16,
+-        VPOP_VSLIDEUP, VPOP_VSLIDEDOWN, VPOP_VSLIDE1UP, VPOP_VSLIDE1DOWN: begin
++        VPOP_VSLIDEUP, VPOP_VSLIDE1UP: begin
+           if (regs_overlap(decoded_o.vd, int'(beats), decoded_o.vs2, int'(beats)))
+             operation_valid = 1'b0;
+           if (decoded_o.form == VSRC_VV) begin
+@@ -225,6 +257,21 @@
+               regs_overlap(decoded_o.vd, int'(beats), decoded_o.vs1, 1))
+             operation_valid = 1'b0;
+         end
++        // viota.m and the vmsbf/vmsof/vmsif scans: "The destination register
++        // group cannot overlap the source register and, if masked, cannot
++        // overlap the mask register (v0)." (RVV 1.0 15.1 / 15.2). viota's
++        // destination groups with LMUL; the scans' destination is a single
++        // mask register. Their vs2 is always one non-grouping register.
++        VPOP_VIOTA, VPOP_VMSBF, VPOP_VMSOF, VPOP_VMSIF: begin
++          if (regs_overlap(decoded_o.vd,
++                           vpop_is_mask_dest(decoded_o.ctrl.op) ? 1 : int'(beats),
++                           decoded_o.vs2, 1))
++            operation_valid = 1'b0;
++          if (!vm && regs_overlap(decoded_o.vd,
++                                  vpop_is_mask_dest(decoded_o.ctrl.op) ? 1 : int'(beats),
++                                  5'd0, 1))
++            operation_valid = 1'b0;
++        end
+         default: ;
+       endcase
+     end else begin
+@@ -233,6 +280,12 @@
+       if (int'(decoded_o.vd) % int'(decoded_o.beats) != 0 ||
+           int'(decoded_o.vs2) % int'(decoded_o.beats) != 0)
+         operation_valid = 1'b0;
++      // RVV 1.0 16.6: the usual "nothing written when vstart >= vl" does not
++      // apply here; the bound is evl = NREG * VLEN / SEW instead. Carried in
++      // ctrl.vlmax. An unusable SEW cannot gate a vtype-independent move, so
++      // it degenerates to "always write".
++      decoded_o.ctrl.vlmax = (sew_bits == 0) ? 17'h1ffff
++                           : 17'(int'(decoded_o.beats) * (VLEN / sew_bits));
+     end
+ 
+     decoded_o.illegal = !operation_valid;
+--- rtl_orig/vcore_perm_pkg.sv	2026-09-17 02:34:55.841556544 +0000
++++ rtl/vcore_perm_pkg.sv	2026-09-17 04:20:09.518309458 +0000
+@@ -41,10 +41,21 @@
+     logic [2:0]  sew;
+     logic        vm;            // instruction bit 25: 1 = unmasked
+     logic        is_fp;         // vmv.x.s(0)/vfmv.f.s(1): which scalar regfile the result targets
++    // vrgather.vx/.vi read ONE element at a scalar index and splat it. RVV
++    // 1.0 16.4: "If XLEN > SEW, the index value is not truncated to SEW
++    // bits", so the index must come from the raw 32-bit scalar rather than
++    // from the SEW-wide broadcast that lands in src1.
++    logic        idx_from_scalar;
+     logic        vta;
+     logic        vma;
+     logic [16:0] vl;
+     logic [16:0] vstart;
++    // VLMAX = LMUL * VLEN / SEW, honouring fractional LMUL. This bounds the
++    // source element space for gather/slide ("index >= VLMAX returns 0") and
++    // cannot be re-derived downstream from group_regs alone, because a
++    // fractional LMUL still occupies one whole register.
++    // For VPOP_VMVNR this field carries evl = NREG * VLEN / SEW instead.
++    logic [16:0] vlmax;
+     logic [16:0] element_base;  // global element index of this beat's first lane
+     logic [3:0]  group_regs;    // registers in the source EMUL group (for vs2 group-buffer bound checks)
+     logic [15:0] tag;
+@@ -192,6 +203,48 @@
+     endcase
+   endfunction
+ 
++  // RVV 1.0 raises an illegal-instruction exception when these execute with
++  // a non-zero vstart: 15.1 (vmsbf/vmsif/vmsof), 15.2 (viota.m), 16.5
++  // (vcompress). Traps on them are always reported with vstart = 0 and they
++  // restart from element 0.
++  function automatic logic vpop_requires_vstart_zero(input vpop_e op);
++    case (op)
++      VPOP_VCOMPRESS, VPOP_VIOTA,
++      VPOP_VMSBF, VPOP_VMSOF, VPOP_VMSIF: return 1'b1;
++      default: return 1'b0;
++    endcase
++  endfunction
++
++  // Destination must not overlap the single mask source these read
++  // (RVV 1.0 15.1 / 15.2). VPOP_VID has no source and is excluded.
++  function automatic logic vpop_mask_src_overlap_illegal(input vpop_e op);
++    case (op)
++      VPOP_VIOTA, VPOP_VMSBF, VPOP_VMSOF, VPOP_VMSIF: return 1'b1;
++      default: return 1'b0;
++    endcase
++  endfunction
++
++  // Does this beat have to fetch the OLD destination register?
++  //
++  // Only if some lane might survive unwritten: a prestart region, an
++  // undisturbed tail (vta=0), an inactive element under vma=0, or an op with
++  // its own "unchanged" region. When vstart=0, vl>0, the instruction is
++  // unmasked and the tail is agnostic, every lane of every beat is written
++  // and the read is pure pressure on a shared 1R1W port -- a third of the
++  // reads of a three-operand permutation, and ALL of the reads of vid.v.
++  function automatic logic vpop_needs_dst_old(input vcore_perm_ctrl_t ctrl);
++    // scalar destination: the VRF is not written at all
++    if (ctrl.op == VPOP_INVALID)  return 1'b0;
++    if (ctrl.op == VPOP_VMV_X_S)  return 1'b0;
++    // whole-register move either replaces the register outright or writes
++    // nothing; only the second case needs the old value back
++    if (ctrl.op == VPOP_VMVNR)    return (ctrl.vstart >= ctrl.vlmax);
++    // vslideup keeps 0 <= i < OFFSET unchanged, vmv.s.x writes element 0 only
++    if (ctrl.op == VPOP_VSLIDEUP) return 1'b1;
++    if (ctrl.op == VPOP_VMV_S_X)  return 1'b1;
++    return !(ctrl.vm && ctrl.vta && (ctrl.vstart == 17'd0) && (ctrl.vl != 17'd0));
++  endfunction
++
+   // vrgatherei16's index operand (vs1) always uses EEW=16, so its own EMUL
+   // (EMUL_index = 16*LMUL/SEW) can differ from the data group's EMUL and, for
+   // SEW=8, needs MORE registers than the data side -- it gets its own group
+@@ -202,24 +255,18 @@
+     return (op == VPOP_VRGATHEREI16);
+   endfunction
+ 
+-  // Number of 128-bit-wide (VLEN) registers needed to hold ctrl.group_regs *
+-  // (VLEN/SEW) index elements at EEW=16, rounded up. Used both for the
++  // Number of 128-bit-wide (VLEN) registers needed to hold VLMAX index
++  // elements at EEW=16, rounded up. Used both for the
+   // vrgatherei16 legality check (must be <= MAXLMUL) in decode and for the
+   // vs1 index-group preload loop bound in vrf_request.
+   function automatic int unsigned vpop_ei16_idx_regs(
+     input vcore_perm_ctrl_t ctrl,
+     input int unsigned vlen
+   );
+-    int unsigned n, group_size, idx_bits, regs;
+-    case (ctrl.sew)
+-      VSEW_8:  n = vlen/8;
+-      VSEW_16: n = vlen/16;
+-      VSEW_32: n = vlen/32;
+-      VSEW_64: n = vlen/64;
+-      default: n = 0;
+-    endcase
+-    group_size = int'(ctrl.group_regs) * n;
+-    idx_bits = group_size * 16;
++    int unsigned idx_bits, regs;
++    // EMUL_index = (16/SEW) * LMUL, i.e. exactly VLMAX index elements at
++    // EEW=16. Derived from ctrl.vlmax so fractional LMUL is counted right.
++    idx_bits = int'(ctrl.vlmax) * 16;
+     regs = (idx_bits + vlen - 1) / vlen;
+     if (regs < 1) regs = 1;
+     return regs;
+--- rtl_orig/vcore_perm_vrf_request.sv	2026-09-17 02:34:55.841615336 +0000
++++ rtl/vcore_perm_vrf_request.sv	2026-09-17 04:20:09.518579032 +0000
+@@ -73,6 +73,13 @@
+     return value;
+   endfunction
+ 
++  // Skip the old-destination fetch when no lane can survive unwritten. This
++  // is the one read this cluster makes that is often dead weight, and on a
++  // shared 1R1W VRF it is a third of a gather's port traffic.
++  state_e dst_or_exec, dst_or_exec_in;
++  assign dst_or_exec    = vpop_needs_dst_old(uop_q.ctrl) ? VRF_DST_REQ : VRF_EXEC;
++  assign dst_or_exec_in = vpop_needs_dst_old(uop_i.ctrl) ? VRF_DST_REQ : VRF_EXEC;
++
+   assign uop_ready_o = (state_q == VRF_IDLE) && !flush_i;
+   assign vrf_req_valid_o = ((state_q == VRF_PRELOAD_VS2_REQ) ||
+                             (state_q == VRF_PRELOAD_VS1_REQ) ||
+@@ -130,11 +137,11 @@
+             state_q <= VRF_PRELOAD_VS2_REQ;
+           end else if (vpop_needs_group_buf(uop_i.ctrl.op)) begin
+             // later beat of the same instruction: group buffer(s) already valid
+-            state_q <= vpop_vs1_needs_group_buf(uop_i.ctrl.op) ? VRF_DST_REQ :
+-                       (uop_i.read_vs1 ? VRF_SRC1_REQ : VRF_DST_REQ);
++            state_q <= vpop_vs1_needs_group_buf(uop_i.ctrl.op) ? dst_or_exec_in :
++                       (uop_i.read_vs1 ? VRF_SRC1_REQ : dst_or_exec_in);
+           end else if (uop_i.read_vs2) state_q <= VRF_SRC2_REQ;
+           else if (uop_i.read_vs1) state_q <= VRF_SRC1_REQ;
+-          else state_q <= VRF_DST_REQ;
++          else state_q <= dst_or_exec_in;
+         end
+         VRF_PRELOAD_VS2_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
+           state_q <= VRF_PRELOAD_VS2_RSP;
+@@ -144,7 +151,7 @@
+             if (vpop_vs1_needs_group_buf(uop_q.ctrl.op)) begin
+               preload_idx_q <= '0;
+               state_q <= VRF_PRELOAD_VS1_REQ;
+-            end else state_q <= uop_q.read_vs1 ? VRF_SRC1_REQ : VRF_DST_REQ;
++            end else state_q <= uop_q.read_vs1 ? VRF_SRC1_REQ : dst_or_exec;
+           end else begin
+             preload_idx_q <= preload_idx_q + 1'b1;
+             state_q <= VRF_PRELOAD_VS2_REQ;
+@@ -155,7 +162,7 @@
+         VRF_PRELOAD_VS1_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
+           vs1_idx_group_q[int'(preload_idx_q)*VLEN +: VLEN] <= vrf_rsp_data_i;
+           if (int'(preload_idx_q) + 1 == vpop_ei16_idx_regs(uop_q.ctrl, VLEN))
+-            state_q <= VRF_DST_REQ; // index comes entirely from the buffer now
++            state_q <= dst_or_exec; // index comes entirely from the buffer now
+           else begin
+             preload_idx_q <= preload_idx_q + 1'b1;
+             state_q <= VRF_PRELOAD_VS1_REQ;
+@@ -166,13 +173,13 @@
+         VRF_SRC2_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
+           src2_q <= vrf_rsp_data_i;
+           if (uop_q.read_vs1) state_q <= VRF_SRC1_REQ;
+-          else state_q <= VRF_DST_REQ;
++          else state_q <= dst_or_exec;
+         end
+         VRF_SRC1_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
+           state_q <= VRF_SRC1_RSP;
+         VRF_SRC1_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
+           src1_q <= vrf_rsp_data_i;
+-          state_q <= VRF_DST_REQ;
++          state_q <= dst_or_exec;
+         end
+         VRF_DST_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
+           state_q <= VRF_DST_RSP;

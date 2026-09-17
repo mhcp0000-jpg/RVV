@@ -41,10 +41,21 @@ package vcore_perm_pkg;
     logic [2:0]  sew;
     logic        vm;            // instruction bit 25: 1 = unmasked
     logic        is_fp;         // vmv.x.s(0)/vfmv.f.s(1): which scalar regfile the result targets
+    // vrgather.vx/.vi read ONE element at a scalar index and splat it. RVV
+    // 1.0 16.4: "If XLEN > SEW, the index value is not truncated to SEW
+    // bits", so the index must come from the raw 32-bit scalar rather than
+    // from the SEW-wide broadcast that lands in src1.
+    logic        idx_from_scalar;
     logic        vta;
     logic        vma;
     logic [16:0] vl;
     logic [16:0] vstart;
+    // VLMAX = LMUL * VLEN / SEW, honouring fractional LMUL. This bounds the
+    // source element space for gather/slide ("index >= VLMAX returns 0") and
+    // cannot be re-derived downstream from group_regs alone, because a
+    // fractional LMUL still occupies one whole register.
+    // For VPOP_VMVNR this field carries evl = NREG * VLEN / SEW instead.
+    logic [16:0] vlmax;
     logic [16:0] element_base;  // global element index of this beat's first lane
     logic [3:0]  group_regs;    // registers in the source EMUL group (for vs2 group-buffer bound checks)
     logic [15:0] tag;
@@ -192,6 +203,48 @@ package vcore_perm_pkg;
     endcase
   endfunction
 
+  // RVV 1.0 raises an illegal-instruction exception when these execute with
+  // a non-zero vstart: 15.1 (vmsbf/vmsif/vmsof), 15.2 (viota.m), 16.5
+  // (vcompress). Traps on them are always reported with vstart = 0 and they
+  // restart from element 0.
+  function automatic logic vpop_requires_vstart_zero(input vpop_e op);
+    case (op)
+      VPOP_VCOMPRESS, VPOP_VIOTA,
+      VPOP_VMSBF, VPOP_VMSOF, VPOP_VMSIF: return 1'b1;
+      default: return 1'b0;
+    endcase
+  endfunction
+
+  // Destination must not overlap the single mask source these read
+  // (RVV 1.0 15.1 / 15.2). VPOP_VID has no source and is excluded.
+  function automatic logic vpop_mask_src_overlap_illegal(input vpop_e op);
+    case (op)
+      VPOP_VIOTA, VPOP_VMSBF, VPOP_VMSOF, VPOP_VMSIF: return 1'b1;
+      default: return 1'b0;
+    endcase
+  endfunction
+
+  // Does this beat have to fetch the OLD destination register?
+  //
+  // Only if some lane might survive unwritten: a prestart region, an
+  // undisturbed tail (vta=0), an inactive element under vma=0, or an op with
+  // its own "unchanged" region. When vstart=0, vl>0, the instruction is
+  // unmasked and the tail is agnostic, every lane of every beat is written
+  // and the read is pure pressure on a shared 1R1W port -- a third of the
+  // reads of a three-operand permutation, and ALL of the reads of vid.v.
+  function automatic logic vpop_needs_dst_old(input vcore_perm_ctrl_t ctrl);
+    // scalar destination: the VRF is not written at all
+    if (ctrl.op == VPOP_INVALID)  return 1'b0;
+    if (ctrl.op == VPOP_VMV_X_S)  return 1'b0;
+    // whole-register move either replaces the register outright or writes
+    // nothing; only the second case needs the old value back
+    if (ctrl.op == VPOP_VMVNR)    return (ctrl.vstart >= ctrl.vlmax);
+    // vslideup keeps 0 <= i < OFFSET unchanged, vmv.s.x writes element 0 only
+    if (ctrl.op == VPOP_VSLIDEUP) return 1'b1;
+    if (ctrl.op == VPOP_VMV_S_X)  return 1'b1;
+    return !(ctrl.vm && ctrl.vta && (ctrl.vstart == 17'd0) && (ctrl.vl != 17'd0));
+  endfunction
+
   // vrgatherei16's index operand (vs1) always uses EEW=16, so its own EMUL
   // (EMUL_index = 16*LMUL/SEW) can differ from the data group's EMUL and, for
   // SEW=8, needs MORE registers than the data side -- it gets its own group
@@ -202,24 +255,18 @@ package vcore_perm_pkg;
     return (op == VPOP_VRGATHEREI16);
   endfunction
 
-  // Number of 128-bit-wide (VLEN) registers needed to hold ctrl.group_regs *
-  // (VLEN/SEW) index elements at EEW=16, rounded up. Used both for the
+  // Number of 128-bit-wide (VLEN) registers needed to hold VLMAX index
+  // elements at EEW=16, rounded up. Used both for the
   // vrgatherei16 legality check (must be <= MAXLMUL) in decode and for the
   // vs1 index-group preload loop bound in vrf_request.
   function automatic int unsigned vpop_ei16_idx_regs(
     input vcore_perm_ctrl_t ctrl,
     input int unsigned vlen
   );
-    int unsigned n, group_size, idx_bits, regs;
-    case (ctrl.sew)
-      VSEW_8:  n = vlen/8;
-      VSEW_16: n = vlen/16;
-      VSEW_32: n = vlen/32;
-      VSEW_64: n = vlen/64;
-      default: n = 0;
-    endcase
-    group_size = int'(ctrl.group_regs) * n;
-    idx_bits = group_size * 16;
+    int unsigned idx_bits, regs;
+    // EMUL_index = (16/SEW) * LMUL, i.e. exactly VLMAX index elements at
+    // EEW=16. Derived from ctrl.vlmax so fractional LMUL is counted right.
+    idx_bits = int'(ctrl.vlmax) * 16;
     regs = (idx_bits + vlen - 1) / vlen;
     if (regs < 1) regs = 1;
     return regs;

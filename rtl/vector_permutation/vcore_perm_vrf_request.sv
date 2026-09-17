@@ -73,6 +73,13 @@ module vcore_perm_vrf_request #(
     return value;
   endfunction
 
+  // Skip the old-destination fetch when no lane can survive unwritten. This
+  // is the one read this cluster makes that is often dead weight, and on a
+  // shared 1R1W VRF it is a third of a gather's port traffic.
+  state_e dst_or_exec, dst_or_exec_in;
+  assign dst_or_exec    = vpop_needs_dst_old(uop_q.ctrl) ? VRF_DST_REQ : VRF_EXEC;
+  assign dst_or_exec_in = vpop_needs_dst_old(uop_i.ctrl) ? VRF_DST_REQ : VRF_EXEC;
+
   assign uop_ready_o = (state_q == VRF_IDLE) && !flush_i;
   assign vrf_req_valid_o = ((state_q == VRF_PRELOAD_VS2_REQ) ||
                             (state_q == VRF_PRELOAD_VS1_REQ) ||
@@ -130,11 +137,11 @@ module vcore_perm_vrf_request #(
             state_q <= VRF_PRELOAD_VS2_REQ;
           end else if (vpop_needs_group_buf(uop_i.ctrl.op)) begin
             // later beat of the same instruction: group buffer(s) already valid
-            state_q <= vpop_vs1_needs_group_buf(uop_i.ctrl.op) ? VRF_DST_REQ :
-                       (uop_i.read_vs1 ? VRF_SRC1_REQ : VRF_DST_REQ);
+            state_q <= vpop_vs1_needs_group_buf(uop_i.ctrl.op) ? dst_or_exec_in :
+                       (uop_i.read_vs1 ? VRF_SRC1_REQ : dst_or_exec_in);
           end else if (uop_i.read_vs2) state_q <= VRF_SRC2_REQ;
           else if (uop_i.read_vs1) state_q <= VRF_SRC1_REQ;
-          else state_q <= VRF_DST_REQ;
+          else state_q <= dst_or_exec_in;
         end
         VRF_PRELOAD_VS2_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
           state_q <= VRF_PRELOAD_VS2_RSP;
@@ -144,7 +151,7 @@ module vcore_perm_vrf_request #(
             if (vpop_vs1_needs_group_buf(uop_q.ctrl.op)) begin
               preload_idx_q <= '0;
               state_q <= VRF_PRELOAD_VS1_REQ;
-            end else state_q <= uop_q.read_vs1 ? VRF_SRC1_REQ : VRF_DST_REQ;
+            end else state_q <= uop_q.read_vs1 ? VRF_SRC1_REQ : dst_or_exec;
           end else begin
             preload_idx_q <= preload_idx_q + 1'b1;
             state_q <= VRF_PRELOAD_VS2_REQ;
@@ -155,7 +162,7 @@ module vcore_perm_vrf_request #(
         VRF_PRELOAD_VS1_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
           vs1_idx_group_q[int'(preload_idx_q)*VLEN +: VLEN] <= vrf_rsp_data_i;
           if (int'(preload_idx_q) + 1 == vpop_ei16_idx_regs(uop_q.ctrl, VLEN))
-            state_q <= VRF_DST_REQ; // index comes entirely from the buffer now
+            state_q <= dst_or_exec; // index comes entirely from the buffer now
           else begin
             preload_idx_q <= preload_idx_q + 1'b1;
             state_q <= VRF_PRELOAD_VS1_REQ;
@@ -166,13 +173,13 @@ module vcore_perm_vrf_request #(
         VRF_SRC2_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
           src2_q <= vrf_rsp_data_i;
           if (uop_q.read_vs1) state_q <= VRF_SRC1_REQ;
-          else state_q <= VRF_DST_REQ;
+          else state_q <= dst_or_exec;
         end
         VRF_SRC1_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
           state_q <= VRF_SRC1_RSP;
         VRF_SRC1_RSP: if (vrf_rsp_valid_i && vrf_rsp_ready_o) begin
           src1_q <= vrf_rsp_data_i;
-          state_q <= VRF_DST_REQ;
+          state_q <= dst_or_exec;
         end
         VRF_DST_REQ: if (vrf_req_valid_o && vrf_req_ready_i)
           state_q <= VRF_DST_RSP;
