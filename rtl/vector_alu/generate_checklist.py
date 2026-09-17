@@ -77,6 +77,8 @@ NEW_FORMS = {
     "vmor": {"mm"}, "vmxor": {"mm"},
     "vmorn": {"mm"}, "vmnand": {"mm"},
     "vmnor": {"mm"}, "vmxnor": {"mm"},
+    "vzext": {"vf2", "vf4", "vf8"},
+    "vsext": {"vf2", "vf4", "vf8"},
 }
 
 
@@ -154,7 +156,9 @@ def main() -> None:
                 "tb_vcore_alu_top" if name in {
                     "vadd.vv", "vmseq.vv", "vredsum.vs", "vwredsumu.vs",
                     "vcpop.m", "vfirst.m", "vmacc.vx", "vmxor.mm",
-                    "vdivu.vx", "vfsgnj.vf", "vfclass.v", "vmfle.vf"
+                    "vdivu.vx", "vfsgnj.vf", "vfclass.v", "vmfle.vf",
+                    "vzext.vf2", "vzext.vf4", "vzext.vf8",
+                    "vsext.vf2", "vsext.vf4", "vsext.vf8"
                 } else ""
             ),
             "spec_corner_test": prior.get("spec_corner_test") or (
@@ -168,7 +172,13 @@ def main() -> None:
                 "masked lanes, divide by 2" if name == "vdivu.vx" else
                 "scalar FP32 sign bits" if name == "vfsgnj.vf" else
                 "zero, infinity, sNaN, qNaN" if name == "vfclass.v" else
-                "NaN invalid flag and mask result" if name == "vmfle.vf" else ""
+                "NaN invalid flag and mask result" if name == "vmfle.vf" else
+                "m2, shared source register across beats" if name == "vzext.vf2" else
+                "byte zero extension" if name == "vzext.vf4" else
+                "signed halfword lanes; fractional overlap rejection" if name == "vsext.vf2" else
+                "m4, signed byte lanes" if name == "vsext.vf4" else
+                "signed byte lanes at SEW=64" if name == "vsext.vf8" else
+                "m8, source EMUL=1; overlap boundary" if name == "vzext.vf8" else ""
             ),
             "notes": prior.get("notes", ""),
         }

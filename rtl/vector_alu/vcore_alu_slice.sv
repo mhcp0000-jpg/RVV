@@ -212,6 +212,8 @@ module vcore_alu_slice #(
         endcase
       end
       VOP_COPY_B: ret.value = b;
+      VOP_ZEXT2, VOP_ZEXT4, VOP_ZEXT8,
+      VOP_SEXT2, VOP_SEXT4, VOP_SEXT8: ret.value = a;
       VOP_FSGNJ:  ret.value = 64'({b[31],a[30:0]});
       VOP_FSGNJN: ret.value = 64'({~b[31],a[30:0]});
       VOP_FSGNJX: ret.value = 64'({a[31]^b[31],a[30:0]});

@@ -306,6 +306,109 @@ module tb_vcore_alu_top;
       $fatal(1,"vmfle.vf mask/invalid mismatch data=%h flags=%h",
              mem[27],last_fflags);
 
+    // vf2 uses both halves of a single source register for two m2 beats.
+    mem[10] = 128'h10_0f_0e_0d_0c_0b_0a_09_08_07_06_05_04_03_02_01;
+    cmd.inst = {6'h12,1'b1,5'd10,5'h06,3'b010,5'd16,7'h57};
+    cmd.sew = VSEW_16;
+    cmd.vlmul = 3'b001;
+    cmd.vl = 16;
+    cmd.mask_snapshot = '1;
+    cmd.tag = 16'h67;
+    send_command();
+    await_commits(36);
+    if (mem[16] !== {16'd8,16'd7,16'd6,16'd5,16'd4,16'd3,16'd2,16'd1} ||
+        mem[17] !== {16'd16,16'd15,16'd14,16'd13,16'd12,16'd11,16'd10,16'd9})
+      $fatal(1,"vzext.vf2 m2 source slice mismatch v16=%h v17=%h",mem[16],mem[17]);
+
+    // vf4 sign extends four bytes per beat from one source register.
+    mem[11] = 128'hfe_03_82_01_80_7f_ff_00_04_03_02_01_fc_fd_fe_ff;
+    cmd.inst = {6'h12,1'b1,5'd11,5'h05,3'b010,5'd20,7'h57};
+    cmd.sew = VSEW_32;
+    cmd.vlmul = 3'b010;
+    cmd.vl = 16;
+    cmd.tag = 16'h68;
+    send_command();
+    await_commits(40);
+    if (mem[20] !== {32'hffff_fffc,32'hffff_fffd,32'hffff_fffe,32'hffff_ffff} ||
+        mem[21] !== {32'd4,32'd3,32'd2,32'd1} ||
+        mem[22] !== {32'hffff_ff80,32'h7f,32'hffff_ffff,32'h0} ||
+        mem[23] !== {32'hffff_fffe,32'd3,32'hffff_ff82,32'd1})
+      $fatal(1,"vsext.vf4 m4 sign/segment mismatch");
+
+    // vf8 consumes one byte per 64-bit lane and eight m8 destination beats.
+    mem[15] = 128'h10_0f_0e_0d_0c_0b_0a_09_08_07_06_05_04_03_02_01;
+    cmd.inst = {6'h12,1'b1,5'd15,5'h02,3'b010,5'd16,7'h57};
+    cmd.sew = VSEW_64;
+    cmd.vlmul = 3'b011;
+    cmd.vl = 16;
+    cmd.tag = 16'h69;
+    send_command();
+    await_commits(48);
+    for (int i=0; i<8; i++)
+      if (mem[16+i] !== {64'(2*i+2),64'(2*i+1)})
+        $fatal(1,"vzext.vf8 m8 beat %0d mismatch %h",i,mem[16+i]);
+
+    // A smaller-EEW source can occupy the highest registers of vd's group.
+    mem[14] = 128'h10_0f_0e_0d_0c_0b_0a_09_08_07_06_05_04_03_02_01;
+    mem[15] = 128'h20_1f_1e_1d_1c_1b_1a_19_18_17_16_15_14_13_12_11;
+    cmd.inst = {6'h12,1'b1,5'd14,5'h04,3'b010,5'd8,7'h57};
+    cmd.sew = VSEW_32;
+    cmd.vl = 32;
+    cmd.tag = 16'h6a;
+    send_command();
+    await_commits(56);
+    if (mem[8] !== {32'd4,32'd3,32'd2,32'd1} ||
+        mem[15] !== {32'd32,32'd31,32'd30,32'd29})
+      $fatal(1,"legal high-end overlap was corrupted");
+
+    // The same source at the low end is a reserved unequal-EEW overlap.
+    cmd.inst = {6'h12,1'b1,5'd12,5'h04,3'b010,5'd8,7'h57};
+    cmd.tag = 16'h6b;
+    send_command();
+    await_commits(57);
+    if (illegal_count != 2 || write_count != 37)
+      $fatal(1,"illegal low-end extension overlap was accepted");
+
+    mem[10] = {64'b0,16'h0001,16'h7fff,16'h8000,16'hffff};
+    cmd.inst = {6'h12,1'b1,5'd10,5'h07,3'b010,5'd24,7'h57};
+    cmd.sew = VSEW_32;
+    cmd.vlmul = 3'b000;
+    cmd.vl = 4;
+    cmd.tag = 16'h6c;
+    send_command();
+    await_commits(58);
+    if (mem[24] !== {32'd1,32'h7fff,32'hffff_8000,32'hffff_ffff})
+      $fatal(1,"vsext.vf2 sign mismatch %h",mem[24]);
+
+    mem[11] = 128'h01_7f_80_ff;
+    cmd.inst = {6'h12,1'b1,5'd11,5'h04,3'b010,5'd25,7'h57};
+    cmd.tag = 16'h6d;
+    send_command();
+    await_commits(59);
+    if (mem[25] !== {32'd1,32'd127,32'd128,32'd255})
+      $fatal(1,"vzext.vf4 zero extension mismatch %h",mem[25]);
+
+    mem[15] = 128'h80_ff;
+    cmd.inst = {6'h12,1'b1,5'd15,5'h03,3'b010,5'd26,7'h57};
+    cmd.sew = VSEW_64;
+    cmd.vl = 2;
+    cmd.tag = 16'h6e;
+    send_command();
+    await_commits(60);
+    if (mem[26] !== {64'hffff_ffff_ffff_ff80,64'hffff_ffff_ffff_ffff})
+      $fatal(1,"vsext.vf8 sign mismatch %h",mem[26]);
+
+    // Fractional source EMUL cannot overlap a different-EEW destination.
+    cmd.inst = {6'h12,1'b1,5'd10,5'h06,3'b010,5'd10,7'h57};
+    cmd.sew = VSEW_32;
+    cmd.vlmul = 3'b111;
+    cmd.vl = 2;
+    cmd.tag = 16'h6f;
+    send_command();
+    await_commits(61);
+    if (illegal_count != 3 || write_count != 40)
+      $fatal(1,"fractional EMUL overlap was accepted");
+
     $display("tb_vcore_alu_top PASS");
     $finish;
   end

@@ -20,6 +20,7 @@ def main() -> None:
     OUT.mkdir(exist_ok=True)
     inst_lines = []
     expected_lines = []
+    sew_lines = []
     for row in rows:
         funct6 = int(row["funct6"], 0)
         funct3 = int(row["funct3"], 0)
@@ -30,8 +31,10 @@ def main() -> None:
             funct3 << 12) | (4 << 7) | 0x57
         inst_lines.append(f"{inst:08x}")
         expected_lines.append("1" if row["decode"] == "yes" else "0")
+        sew_lines.append("3" if row["mnemonic"].endswith("vf8") else "2")
     (OUT / "alu_decode_inst.hex").write_text("\n".join(inst_lines) + "\n")
     (OUT / "alu_decode_expected.hex").write_text("\n".join(expected_lines) + "\n")
+    (OUT / "alu_decode_sew.hex").write_text("\n".join(sew_lines) + "\n")
     print(f"Generated {len(rows)} official encoding probes")
 
 

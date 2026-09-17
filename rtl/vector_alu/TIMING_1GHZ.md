@@ -12,6 +12,7 @@
 | 정수 reduction | 한 요소를 64비트 누산기에 적용 | source 요소 수에 비례 | 동적 요소 선택 + 64비트 add/compare |
 | mask reduction | 32비트 mask를 scan/popcount | 4 compute 클록 | 32비트 활성화, popcount, first-bit 선택 |
 | 정수 divide/remainder | radix-2로 몫 1비트 | 활성 요소당 SEW+준비 클록 | 65비트 compare/subtract + mux |
+| 정수 확장 `vzext/vsext` | source sub-register 선택 후 64비트씩 확장 | 2 compute 클록 + VRF/WB | 입력의 128비트 정렬 mux와 lane sign-extension mux |
 | FP FMA | 아직 미구현 | 미정 | 2클록 달성 가능 여부도 미검증 |
 
 연산기의 **2 compute 클록**과 명령의 전체 지연은 다릅니다. 1R1W VRF에서
@@ -32,6 +33,9 @@ WB 후 다음 beat로 넘어가므로, 명령 전체가 2클록 안에 끝나지
 4. FP32 FMA는 fused rounding과 `fflags`까지 포함하여 설계해야 합니다.
    2클록은 목표일 뿐이며, 독립 add/mul을 연결해 두 번 반올림하는 구현은
    RVV의 fused 명령을 만족하지 않습니다.
+5. 확장 연산은 source EMUL에 따라 한 128비트 소스의 일부를 선택합니다.
+   현재 조합 경로의 정렬 shift가 1ns에 들어오는지 확인하고, 실패하면
+   VRF 응답 뒤 정렬 레지스터를 추가하거나 소스 선택을 고정 mux로 바꿉니다.
 
 ## 사인오프에 필요한 입력과 산출물
 

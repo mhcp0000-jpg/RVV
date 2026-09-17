@@ -21,6 +21,7 @@ module vcore_alu_sequencer #(
   logic [2:0] beat_index_q;
   logic [3:0] total_beats_q;
   int unsigned elements_per_beat;
+  int unsigned extension_factor;
   logic mask_dest;
 
   assign decoded_ready_o = (state_q == SEQ_IDLE) && !flush_i;
@@ -37,6 +38,7 @@ module vcore_alu_sequencer #(
     endcase
     mask_dest = vop_is_compare(decoded_q.ctrl.op) ||
                 vop_is_mask_logic(decoded_q.ctrl.op);
+    extension_factor = int'(vop_extension_factor(decoded_q.ctrl.op));
     uop_o = '0;
     uop_o.ctrl = decoded_q.ctrl;
     uop_o.ctrl.element_base = 17'(int'(beat_index_q) * elements_per_beat);
@@ -52,8 +54,12 @@ module vcore_alu_sequencer #(
     uop_o.vd_addr = uop_o.ctrl.vd_addr;
     uop_o.vs1_addr = vop_is_reduction(decoded_q.ctrl.op) ? decoded_q.vs1 :
                       5'(int'(decoded_q.vs1) + int'(beat_index_q));
-    uop_o.vs2_addr = 5'(int'(decoded_q.vs2) + int'(beat_index_q));
+    uop_o.vs2_addr = 5'(int'(decoded_q.vs2) +
+                          (vop_is_extension(decoded_q.ctrl.op) ?
+                           int'(beat_index_q)/extension_factor :
+                           int'(beat_index_q)));
     uop_o.read_vs1 = (decoded_q.form == VSRC_VV) &&
+                     !vop_is_extension(decoded_q.ctrl.op) &&
                      (decoded_q.ctrl.op != VOP_FCLASS) &&
                      !vop_is_scalar_mask_reduce(decoded_q.ctrl.op) &&
                      (!vop_is_reduction(decoded_q.ctrl.op) || beat_index_q == 0) &&

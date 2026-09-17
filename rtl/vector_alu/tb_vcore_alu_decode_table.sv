@@ -3,6 +3,7 @@ module tb_vcore_alu_decode_table;
   import vcore_alu_pkg::*;
   logic [31:0] instructions [0:279];
   logic [0:0] expected [0:279];
+  logic [2:0] sew_vector [0:279];
   vcore_alu_cmd_t cmd;
   vcore_alu_decoded_t decoded;
   logic cmd_ready, decoded_valid;
@@ -16,6 +17,7 @@ module tb_vcore_alu_decode_table;
   initial begin
     $readmemh("out/alu_decode_inst.hex", instructions);
     $readmemh("out/alu_decode_expected.hex", expected);
+    $readmemh("out/alu_decode_sew.hex", sew_vector);
     cmd = '0;
     cmd.sew = VSEW_32;
     cmd.vlmul = 3'b000;
@@ -23,6 +25,7 @@ module tb_vcore_alu_decode_table;
     cmd.mask_snapshot = '1;
     for (int i=0; i<280; i++) begin
       cmd.inst = instructions[i];
+      cmd.sew = sew_vector[i];
       #1;
       if (!cmd_ready || !decoded_valid || decoded.illegal !== !expected[i])
         $fatal(1,"decode row=%0d inst=%h expected=%b got illegal=%b op=%0d",

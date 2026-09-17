@@ -16,6 +16,8 @@ module vcore_alu_decode #(
   logic operation_valid;
   logic [3:0] beats;
   int unsigned sew_bits, fraction_div, max_elements;
+  int unsigned extension_factor, source_group_beats;
+  int unsigned vd_begin, vd_end, vs2_begin, vs2_end;
 
   assign cmd_ready_o = decoded_ready_i;
   assign decoded_valid_o = cmd_valid_i;
@@ -124,6 +126,18 @@ module vcore_alu_decode #(
           endcase
           operation_valid &= (funct3 == 3'b010);
         end
+        6'h12: begin
+          operation_valid &= (funct3 == 3'b010);
+          case (cmd_i.inst[19:15])
+            5'h06: decoded_o.ctrl.op = VOP_ZEXT2;
+            5'h04: decoded_o.ctrl.op = VOP_ZEXT4;
+            5'h02: decoded_o.ctrl.op = VOP_ZEXT8;
+            5'h07: decoded_o.ctrl.op = VOP_SEXT2;
+            5'h05: decoded_o.ctrl.op = VOP_SEXT4;
+            5'h03: decoded_o.ctrl.op = VOP_SEXT8;
+            default: operation_valid = 1'b0;
+          endcase
+        end
         6'h18: decoded_o.ctrl.op = VOP_MANDN;
         6'h19: decoded_o.ctrl.op = VOP_MAND;
         6'h1a: decoded_o.ctrl.op = VOP_MOR;
@@ -204,6 +218,25 @@ module vcore_alu_decode #(
     max_elements = (sew_bits == 0) ? 0 : ((VLEN / sew_bits) * int'(beats)) / fraction_div;
     if (max_elements == 0 || int'(cmd_i.vl) > max_elements || cmd_i.vill)
       operation_valid = 1'b0;
+    extension_factor = int'(vop_extension_factor(decoded_o.ctrl.op));
+    source_group_beats = int'(beats) / extension_factor;
+    vd_begin = int'(decoded_o.vd);
+    vd_end = vd_begin + int'(beats) - 1;
+    vs2_begin = int'(decoded_o.vs2);
+    vs2_end = vs2_begin + ((source_group_beats == 0) ? 1 : source_group_beats) - 1;
+    if (vop_is_extension(decoded_o.ctrl.op)) begin
+      // EEW(source)=SEW/factor; EMUL(source)=LMUL/factor.
+      if (sew_bits < 8*extension_factor || vd_end >= 32 || vs2_end >= 32)
+        operation_valid = 1'b0;
+      if (source_group_beats > 1 &&
+          (vs2_begin % source_group_beats) != 0)
+        operation_valid = 1'b0;
+      // Unequal EEWs may overlap only at the high end and only when
+      // the source EMUL is at least one whole register.
+      if ((vd_begin <= vs2_end) && (vs2_begin <= vd_end) &&
+          (source_group_beats == 0 || vs2_end != vd_end))
+        operation_valid = 1'b0;
+    end
     if ((vop_is_reduction(decoded_o.ctrl.op) ||
          vop_is_scalar_mask_reduce(decoded_o.ctrl.op)) && cmd_i.vstart != 0)
       operation_valid = 1'b0;
@@ -219,10 +252,12 @@ module vcore_alu_decode #(
            !vop_is_scalar_mask_reduce(decoded_o.ctrl.op) &&
            (int'(decoded_o.vd) % int'(beats)) != 0) ||
           ((decoded_o.ctrl.op != VOP_COPY_B) &&
+           !vop_is_extension(decoded_o.ctrl.op) &&
            !vop_is_mask_logic(decoded_o.ctrl.op) &&
            !vop_is_scalar_mask_reduce(decoded_o.ctrl.op) &&
            (int'(decoded_o.vs2) % int'(beats)) != 0) ||
-          (form_vv && !vop_is_reduction(decoded_o.ctrl.op) &&
+          (form_vv && !vop_is_extension(decoded_o.ctrl.op) &&
+           !vop_is_reduction(decoded_o.ctrl.op) &&
            !vop_is_mask_logic(decoded_o.ctrl.op) &&
            !vop_is_scalar_mask_reduce(decoded_o.ctrl.op) &&
            (int'(decoded_o.vs1) % int'(beats)) != 0))

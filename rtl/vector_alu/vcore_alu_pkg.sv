@@ -94,6 +94,12 @@ package vcore_alu_pkg;
     VOP_FNE      = 8'd79,
     VOP_FGT      = 8'd80,
     VOP_FGE      = 8'd81,
+    VOP_ZEXT2    = 8'd82,
+    VOP_ZEXT4    = 8'd83,
+    VOP_ZEXT8    = 8'd84,
+    VOP_SEXT2    = 8'd85,
+    VOP_SEXT4    = 8'd86,
+    VOP_SEXT8    = 8'd87,
     VOP_INVALID  = 8'hff
   } vop_e;
 
@@ -243,6 +249,28 @@ package vcore_alu_pkg;
            (op == VOP_REMU) || (op == VOP_REM);
   endfunction
 
+  function automatic logic vop_is_extension(input logic [7:0] op);
+    case (op)
+      VOP_ZEXT2, VOP_ZEXT4, VOP_ZEXT8,
+      VOP_SEXT2, VOP_SEXT4, VOP_SEXT8: return 1'b1;
+      default: return 1'b0;
+    endcase
+  endfunction
+
+  function automatic logic vop_extension_signed(input logic [7:0] op);
+    return (op == VOP_SEXT2) || (op == VOP_SEXT4) ||
+           (op == VOP_SEXT8);
+  endfunction
+
+  function automatic logic [3:0] vop_extension_factor(input logic [7:0] op);
+    case (op)
+      VOP_ZEXT2, VOP_SEXT2: return 4'd2;
+      VOP_ZEXT4, VOP_SEXT4: return 4'd4;
+      VOP_ZEXT8, VOP_SEXT8: return 4'd8;
+      default: return 4'd1;
+    endcase
+  endfunction
+
   function automatic logic vop_supported(input logic [7:0] op);
     case (op)
       VOP_ADD, VOP_SUB, VOP_RSUB, VOP_AND, VOP_OR, VOP_XOR,
@@ -263,7 +291,9 @@ package vcore_alu_pkg;
       VOP_DIVU, VOP_DIV, VOP_REMU, VOP_REM,
       VOP_FSGNJ, VOP_FSGNJN, VOP_FSGNJX, VOP_FCLASS,
       VOP_FMIN, VOP_FMAX, VOP_FEQ, VOP_FLE, VOP_FLT,
-      VOP_FNE, VOP_FGT, VOP_FGE: return 1'b1;
+      VOP_FNE, VOP_FGT, VOP_FGE,
+      VOP_ZEXT2, VOP_ZEXT4, VOP_ZEXT8,
+      VOP_SEXT2, VOP_SEXT4, VOP_SEXT8: return 1'b1;
       default: return 1'b0;
     endcase
   endfunction

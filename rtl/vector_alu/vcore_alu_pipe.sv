@@ -59,6 +59,7 @@ module vcore_alu_pipe #(
   int unsigned div_width;
 
   logic [SLICE_W-1:0] slice_src1, slice_src2, slice_old;
+  logic [VLEN-1:0] extension_data;
   logic [VLEN-1:0] slice_old_mask, slice_mask;
   vcore_alu_ctrl_t slice_ctrl;
   logic [SLICE_W-1:0] slice_data;
@@ -82,6 +83,50 @@ module vcore_alu_pipe #(
       VSEW_64: return seed_data[63:0];
       default: return '0;
     endcase
+  endfunction
+
+  // One source register contains several destination beats when source
+  // EMUL is smaller than destination LMUL. The sequencer selects its VRF
+  // address; this mux selects the relevant sub-register and widens its lanes.
+  function automatic logic [VLEN-1:0] expand_extension(
+    input logic [VLEN-1:0] source,
+    input vcore_alu_ctrl_t ext_ctrl
+  );
+    logic [VLEN-1:0] expanded, aligned;
+    int unsigned factor, dest_width, source_width, shift_bits;
+    logic sign_mode;
+    expanded = '0;
+    dest_width = 8 << ext_ctrl.sew;
+    factor = int'(vop_extension_factor(ext_ctrl.op));
+    source_width = dest_width/factor;
+    sign_mode = vop_extension_signed(ext_ctrl.op);
+    shift_bits = (int'(ext_ctrl.element_base)*source_width) % VLEN;
+    aligned = source >> shift_bits;
+    case (dest_width)
+      16: for (int i=0; i<VLEN/16; i++)
+        expanded[i*16 +: 16] = sign_mode ?
+          16'($signed(aligned[i*8 +: 8])) : 16'(aligned[i*8 +: 8]);
+      32: for (int i=0; i<VLEN/32; i++) begin
+        if (source_width == 8)
+          expanded[i*32 +: 32] = sign_mode ?
+            32'($signed(aligned[i*8 +: 8])) : 32'(aligned[i*8 +: 8]);
+        else
+          expanded[i*32 +: 32] = sign_mode ?
+            32'($signed(aligned[i*16 +: 16])) : 32'(aligned[i*16 +: 16]);
+      end
+      64: for (int i=0; i<VLEN/64; i++) begin
+        case (source_width)
+          8: expanded[i*64 +: 64] = sign_mode ?
+               64'($signed(aligned[i*8 +: 8])) : 64'(aligned[i*8 +: 8]);
+          16: expanded[i*64 +: 64] = sign_mode ?
+                64'($signed(aligned[i*16 +: 16])) : 64'(aligned[i*16 +: 16]);
+          default: expanded[i*64 +: 64] = sign_mode ?
+                64'($signed(aligned[i*32 +: 32])) : 64'(aligned[i*32 +: 32]);
+        endcase
+      end
+      default: ;
+    endcase
+    return expanded;
   endfunction
 
   function automatic logic [VLEN-1:0] reduction_result(
@@ -114,11 +159,13 @@ module vcore_alu_pipe #(
   assign rsp_valid_o = rsp_valid_q;
   assign result_o = rsp_data_q;
   assign rsp_meta_o = rsp_meta_q;
+  assign extension_data = vop_is_extension(ctrl_i.op) ?
+                          expand_extension(src2_i,ctrl_i) : src2_i;
 
   always_comb begin
     if (phase_q == PHASE_LOW) begin
       slice_src1 = src1_i[SLICE_W-1:0];
-      slice_src2 = src2_i[SLICE_W-1:0];
+      slice_src2 = extension_data[SLICE_W-1:0];
       slice_old = dst_old_i[SLICE_W-1:0];
       slice_old_mask = dst_old_i;
       slice_mask = mask_i;
@@ -289,7 +336,7 @@ module vcore_alu_pipe #(
       if (req_fire) begin
         ctrl_q <= ctrl_i;
         src1_high_q <= src1_i[VLEN-1:SLICE_W];
-        src2_high_q <= src2_i[VLEN-1:SLICE_W];
+        src2_high_q <= extension_data[VLEN-1:SLICE_W];
         dst_old_q <= dst_old_i;
         mask_q <= mask_i;
         if (!vop_is_reduction(ctrl_i.op)) begin
