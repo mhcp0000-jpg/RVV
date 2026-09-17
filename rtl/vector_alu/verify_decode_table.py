@@ -27,6 +27,9 @@ def main() -> None:
         vm = int(row["vm_constraint"], 0) if row["vm_constraint"] != "variable" else 1
         vs1 = (int(row["vs1_constraint"], 0) if row["vs1_constraint"] != "variable"
                else 3)
+        if row["mnemonic"].startswith(("vwaddu.wv", "vwadd.wv",
+                                         "vwsubu.wv", "vwsub.wv")):
+            vs1 = 8  # Separate the narrow source from wide vs2.
         inst = (funct6 << 26) | (vm << 25) | (2 << 20) | (vs1 << 15) | (
             funct3 << 12) | (4 << 7) | 0x57
         inst_lines.append(f"{inst:08x}")

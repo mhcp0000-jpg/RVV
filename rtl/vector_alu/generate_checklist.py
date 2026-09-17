@@ -79,6 +79,10 @@ NEW_FORMS = {
     "vmnor": {"mm"}, "vmxnor": {"mm"},
     "vzext": {"vf2", "vf4", "vf8"},
     "vsext": {"vf2", "vf4", "vf8"},
+    "vwaddu": {"vv", "vx", "wv", "wx"},
+    "vwadd": {"vv", "vx", "wv", "wx"},
+    "vwsubu": {"vv", "vx", "wv", "wx"},
+    "vwsub": {"vv", "vx", "wv", "wx"},
 }
 
 
@@ -158,8 +162,10 @@ def main() -> None:
                     "vcpop.m", "vfirst.m", "vmacc.vx", "vmxor.mm",
                     "vdivu.vx", "vfsgnj.vf", "vfclass.v", "vmfle.vf",
                     "vzext.vf2", "vzext.vf4", "vzext.vf8",
-                    "vsext.vf2", "vsext.vf4", "vsext.vf8"
-                } else ""
+                    "vsext.vf2", "vsext.vf4", "vsext.vf8",
+                    "vwaddu.vv", "vwadd.vx", "vwsub.wv"
+                } or (base in {"vwaddu", "vwadd", "vwsubu", "vwsub"} and
+                      suffix in {"vv", "vx", "wv", "wx"}) else ""
             ),
             "spec_corner_test": prior.get("spec_corner_test") or (
                 "m2/m4/m8, masked, vl=0, vstart!=0"
@@ -178,7 +184,12 @@ def main() -> None:
                 "signed halfword lanes; fractional overlap rejection" if name == "vsext.vf2" else
                 "m4, signed byte lanes" if name == "vsext.vf4" else
                 "signed byte lanes at SEW=64" if name == "vsext.vf8" else
-                "m8, source EMUL=1; overlap boundary" if name == "vzext.vf8" else ""
+                "m8, source EMUL=1; overlap boundary" if name == "vzext.vf8" else
+                "m2 source, m4 destination" if name == "vwaddu.vv" else
+                "signed scalar widened; negative lanes" if name == "vwadd.vx" else
+                "wide vs2, narrow vs1; destructive vd" if name == "vwsub.wv" else
+                "m1 all lanes, OP-MVV/OP-MVX sweep" if base in {
+                    "vwaddu", "vwadd", "vwsubu", "vwsub"} else ""
             ),
             "notes": prior.get("notes", ""),
         }

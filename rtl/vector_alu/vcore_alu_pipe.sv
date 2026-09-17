@@ -59,7 +59,8 @@ module vcore_alu_pipe #(
   int unsigned div_width;
 
   logic [SLICE_W-1:0] slice_src1, slice_src2, slice_old;
-  logic [VLEN-1:0] extension_data;
+  logic [VLEN-1:0] prepared_src1, prepared_src2;
+  vcore_alu_ctrl_t widen_ctrl;
   logic [VLEN-1:0] slice_old_mask, slice_mask;
   vcore_alu_ctrl_t slice_ctrl;
   logic [SLICE_W-1:0] slice_data;
@@ -159,13 +160,25 @@ module vcore_alu_pipe #(
   assign rsp_valid_o = rsp_valid_q;
   assign result_o = rsp_data_q;
   assign rsp_meta_o = rsp_meta_q;
-  assign extension_data = vop_is_extension(ctrl_i.op) ?
-                          expand_extension(src2_i,ctrl_i) : src2_i;
+  always_comb begin
+    prepared_src1 = src1_i;
+    prepared_src2 = src2_i;
+    widen_ctrl = ctrl_i;
+    widen_ctrl.sew = ctrl_i.sew + 3'd1;
+    widen_ctrl.op = vop_widen_signed(ctrl_i.op) ? VOP_SEXT2 : VOP_ZEXT2;
+    if (vop_is_extension(ctrl_i.op))
+      prepared_src2 = expand_extension(src2_i,ctrl_i);
+    else if (vop_is_widen_addsub(ctrl_i.op)) begin
+      prepared_src1 = expand_extension(src1_i,widen_ctrl);
+      if (!vop_widen_vs2_wide(ctrl_i.op))
+        prepared_src2 = expand_extension(src2_i,widen_ctrl);
+    end
+  end
 
   always_comb begin
     if (phase_q == PHASE_LOW) begin
-      slice_src1 = src1_i[SLICE_W-1:0];
-      slice_src2 = extension_data[SLICE_W-1:0];
+      slice_src1 = prepared_src1[SLICE_W-1:0];
+      slice_src2 = prepared_src2[SLICE_W-1:0];
       slice_old = dst_old_i[SLICE_W-1:0];
       slice_old_mask = dst_old_i;
       slice_mask = mask_i;
@@ -177,6 +190,10 @@ module vcore_alu_pipe #(
       slice_old_mask = low_mask_dst_q;
       slice_mask = mask_q;
       slice_ctrl = ctrl_q;
+    end
+    if (vop_is_widen_addsub(slice_ctrl.op)) begin
+      slice_ctrl.sew = slice_ctrl.sew + 3'd1;
+      slice_ctrl.op = vop_widen_sub(slice_ctrl.op) ? VOP_SUB : VOP_ADD;
     end
   end
 
@@ -335,8 +352,8 @@ module vcore_alu_pipe #(
 
       if (req_fire) begin
         ctrl_q <= ctrl_i;
-        src1_high_q <= src1_i[VLEN-1:SLICE_W];
-        src2_high_q <= extension_data[VLEN-1:SLICE_W];
+        src1_high_q <= prepared_src1[VLEN-1:SLICE_W];
+        src2_high_q <= prepared_src2[VLEN-1:SLICE_W];
         dst_old_q <= dst_old_i;
         mask_q <= mask_i;
         if (!vop_is_reduction(ctrl_i.op)) begin
@@ -345,7 +362,8 @@ module vcore_alu_pipe #(
           low_vxsat_q <= slice_vxsat;
           low_fflags_q <= slice_fflags;
         end
-        illegal_q <= !vop_supported(ctrl_i.op) || !vsew_supported(ctrl_i.sew);
+        illegal_q <= !vop_supported(ctrl_i.op) || !vsew_supported(ctrl_i.sew) ||
+                     (vop_is_widen_addsub(ctrl_i.op) && ctrl_i.sew > VSEW_32);
         if (vop_is_reduction(ctrl_i.op)) begin
           reduction_src_q <= src2_i;
           reduction_index_q <= '0;

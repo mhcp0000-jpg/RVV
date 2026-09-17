@@ -409,6 +409,153 @@ module tb_vcore_alu_top;
     if (illegal_count != 3 || write_count != 40)
       $fatal(1,"fractional EMUL overlap was accepted");
 
+    // Widening add doubles destination EMUL: m2 sources, m4 destination.
+    mem[2] = 128'h10_0f_0e_0d_0c_0b_0a_09_08_07_06_05_04_03_02_01;
+    mem[3] = 128'h20_1f_1e_1d_1c_1b_1a_19_18_17_16_15_14_13_12_11;
+    mem[6] = {16{8'd10}};
+    mem[7] = {16{8'd20}};
+    cmd.inst = {6'h30,1'b1,5'd2,5'd6,3'b010,5'd8,7'h57};
+    cmd.sew = VSEW_8;
+    cmd.vlmul = 3'b001;
+    cmd.vl = 32;
+    cmd.tag = 16'h70;
+    send_command();
+    await_commits(65);
+    for (int i=0; i<4; i++)
+      for (int j=0; j<8; j++)
+        if (mem[8+i][j*16 +: 16] !== 16'(i*8+j+1+(i<2 ? 10 : 20)))
+          $fatal(1,"vwaddu.vv m2/m4 beat=%0d lane=%0d data=%h",i,j,mem[8+i]);
+
+    // Signed widening with a scalar sign-extends the SEW=16 scalar first.
+    mem[10] = {16'h8000,16'hffff,16'd6,16'd5,16'd4,16'd3,16'd2,16'd1};
+    cmd.inst = {6'h31,1'b1,5'd10,5'd3,3'b110,5'd12,7'h57};
+    cmd.sew = VSEW_16;
+    cmd.vlmul = 3'b000;
+    cmd.vl = 8;
+    cmd.scalar = 32'hffff_fffe;
+    cmd.tag = 16'h71;
+    send_command();
+    await_commits(67);
+    if (mem[12] !== {32'd2,32'd1,32'd0,32'hffff_ffff} ||
+        mem[13] !== {32'hffff_7ffe,32'hffff_fffd,32'd4,32'd3})
+      $fatal(1,"vwadd.vx signed widening mismatch v12=%h v13=%h",mem[12],mem[13]);
+
+    // .wv reads vs2 at destination EEW and vs1 at source EEW.
+    mem[16] = {32'd40,32'd30,32'd20,32'd10};
+    mem[17] = {32'd80,32'd70,32'd60,32'd50};
+    mem[18] = {16'd8,16'd7,16'd6,16'd5,16'd4,16'd3,16'd2,16'd1};
+    cmd.inst = {6'h37,1'b1,5'd16,5'd18,3'b010,5'd16,7'h57};
+    cmd.tag = 16'h72;
+    send_command();
+    await_commits(69);
+    if (mem[16] !== {32'd36,32'd27,32'd18,32'd9} ||
+        mem[17] !== {32'd72,32'd63,32'd54,32'd45})
+      $fatal(1,"vwsub.wv mixed EEW/destructive vd mismatch");
+
+    cmd.inst = {6'h30,1'b1,5'd8,5'd4,3'b010,5'd8,7'h57};
+    cmd.sew = VSEW_8;
+    cmd.vl = 16;
+    cmd.tag = 16'h73;
+    send_command();
+    await_commits(70);
+    if (illegal_count != 4 || write_count != 48)
+      $fatal(1,"widen low-end overlap was accepted");
+
+    cmd.inst = {6'h30,1'b1,5'd8,5'd16,3'b010,5'd0,7'h57};
+    cmd.vlmul = 3'b011;
+    cmd.vl = 128;
+    cmd.tag = 16'h74;
+    send_command();
+    await_commits(71);
+    if (illegal_count != 5 || write_count != 48)
+      $fatal(1,"widen destination EMUL>8 was accepted");
+
+    // Exercise all 16 widening add/sub OP-MVV/OP-MVX encodings separately.
+    mem[2] = {16'd8,16'd7,16'd6,16'd5,16'd4,16'd3,16'd2,16'd1};
+    mem[4] = {8{16'd2}};
+    mem[8] = {32'd40,32'd30,32'd20,32'd10};
+    mem[9] = {32'd80,32'd70,32'd60,32'd50};
+    cmd.sew = VSEW_16;
+    cmd.vlmul = 3'b000;
+    cmd.vl = 8;
+    cmd.scalar = 32'd2;
+    for (int opcode=32'h30; opcode<=32'h37; opcode++) begin
+      for (int form=0; form<2; form++) begin
+        mem[20] = '0;
+        mem[21] = '0;
+        cmd.inst = {6'(opcode),1'b1,
+                    (opcode>=32'h34 ? 5'd8 : 5'd2),
+                    (form==0 ? 5'd4 : 5'd3),
+                    (form==0 ? 3'b010 : 3'b110),5'd20,7'h57};
+        cmd.tag = 16'(32'h80 + (opcode-32'h30)*2 + form);
+        send_command();
+        await_commits(71 + 2*((opcode-32'h30)*2 + form + 1));
+        for (int lane_index=0; lane_index<8; lane_index++) begin
+          int expected_value;
+          expected_value = (opcode>=32'h34) ? 10*(lane_index+1) : lane_index+1;
+          expected_value += ((opcode==32'h32) || (opcode==32'h33) ||
+                             (opcode==32'h36) || (opcode==32'h37)) ? -2 : 2;
+          if (mem[20+lane_index/4][(lane_index%4)*32 +: 32] !==
+              32'(expected_value))
+            $fatal(1,"widen encoding funct6=%h form=%0d lane=%0d got=%h expected=%h",
+                   opcode,form,lane_index,
+                   mem[20+lane_index/4][(lane_index%4)*32 +: 32],
+                   expected_value);
+        end
+      end
+    end
+    if (write_count != 80 || illegal_count != 5)
+      $fatal(1,"widen encoding sweep lost writes/raised illegal");
+
+    // m4 narrow sources produce an m8 wide destination, using all 8 beats.
+    for (int i=0; i<4; i++) begin
+      mem[12+i] = {4{32'd100}};
+      for (int j=0; j<4; j++)
+        mem[8+i][j*32 +: 32] = 32'(4*i+j+1);
+    end
+    cmd.inst = {6'h30,1'b1,5'd8,5'd12,3'b010,5'd16,7'h57};
+    cmd.sew = VSEW_32;
+    cmd.vlmul = 3'b010;
+    cmd.vl = 16;
+    cmd.tag = 16'h90;
+    send_command();
+    await_commits(111);
+    for (int i=0; i<8; i++)
+      if (mem[16+i] !== {64'(2*i+102),64'(2*i+101)})
+        $fatal(1,"widen m4/m8 beat %0d mismatch %h",i,mem[16+i]);
+
+    // mf2 source expands into one m1 destination register.
+    mem[2] = {16{8'd5}};
+    mem[4] = {16{8'd2}};
+    cmd.inst = {6'h30,1'b1,5'd2,5'd4,3'b010,5'd24,7'h57};
+    cmd.sew = VSEW_8;
+    cmd.vlmul = 3'b111;
+    cmd.vl = 8;
+    cmd.tag = 16'h91;
+    send_command();
+    await_commits(112);
+    if (mem[24] !== {8{16'd7}})
+      $fatal(1,"widen fractional LMUL mismatch %h",mem[24]);
+
+    // High-end overlap is legal; its inactive and tail lanes become agnostic.
+    mem[24] = '0;
+    mem[25] = {16'd8,16'd7,16'd6,16'd5,16'd4,16'd3,16'd2,16'd1};
+    mem[4] = {8{16'd2}};
+    cmd.inst = {6'h30,1'b0,5'd25,5'd4,3'b010,5'd24,7'h57};
+    cmd.sew = VSEW_16;
+    cmd.vlmul = 3'b000;
+    cmd.vl = 3;
+    cmd.mask_snapshot = 128'h5;
+    cmd.vta = 0;
+    cmd.vma = 0;
+    cmd.tag = 16'h92;
+    send_command();
+    await_commits(114);
+    if (mem[24] !== {32'hffff_ffff,32'd5,32'hffff_ffff,32'd3} ||
+        mem[25] !== '1 || write_count != 91 || illegal_count != 5)
+      $fatal(1,"widen high-end overlap/forced agnostic mismatch %h %h",
+             mem[24],mem[25]);
+
     $display("tb_vcore_alu_top PASS");
     $finish;
   end
