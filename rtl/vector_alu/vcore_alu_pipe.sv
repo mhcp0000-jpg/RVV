@@ -165,11 +165,16 @@ module vcore_alu_pipe #(
     prepared_src2 = src2_i;
     widen_ctrl = ctrl_i;
     widen_ctrl.sew = ctrl_i.sew + 3'd1;
-    widen_ctrl.op = vop_widen_signed(ctrl_i.op) ? VOP_SEXT2 : VOP_ZEXT2;
+    widen_ctrl.op = (vop_is_widen_mul(ctrl_i.op) ?
+                     vop_widen_mul_vs1_signed(ctrl_i.op) :
+                     vop_widen_signed(ctrl_i.op)) ? VOP_SEXT2 : VOP_ZEXT2;
     if (vop_is_extension(ctrl_i.op))
       prepared_src2 = expand_extension(src2_i,ctrl_i);
-    else if (vop_is_widen_addsub(ctrl_i.op)) begin
+    else if (vop_is_widen_integer(ctrl_i.op)) begin
       prepared_src1 = expand_extension(src1_i,widen_ctrl);
+      widen_ctrl.op = (vop_is_widen_mul(ctrl_i.op) ?
+                       vop_widen_mul_vs2_signed(ctrl_i.op) :
+                       vop_widen_signed(ctrl_i.op)) ? VOP_SEXT2 : VOP_ZEXT2;
       if (!vop_widen_vs2_wide(ctrl_i.op))
         prepared_src2 = expand_extension(src2_i,widen_ctrl);
     end
@@ -194,6 +199,9 @@ module vcore_alu_pipe #(
     if (vop_is_widen_addsub(slice_ctrl.op)) begin
       slice_ctrl.sew = slice_ctrl.sew + 3'd1;
       slice_ctrl.op = vop_widen_sub(slice_ctrl.op) ? VOP_SUB : VOP_ADD;
+    end else if (vop_is_widen_mul(slice_ctrl.op)) begin
+      slice_ctrl.sew = slice_ctrl.sew + 3'd1;
+      slice_ctrl.op = vop_widen_mul_accumulate(slice_ctrl.op) ? VOP_MACC : VOP_MUL;
     end
   end
 
@@ -363,7 +371,7 @@ module vcore_alu_pipe #(
           low_fflags_q <= slice_fflags;
         end
         illegal_q <= !vop_supported(ctrl_i.op) || !vsew_supported(ctrl_i.sew) ||
-                     (vop_is_widen_addsub(ctrl_i.op) && ctrl_i.sew > VSEW_32);
+                     (vop_is_widen_integer(ctrl_i.op) && ctrl_i.sew > VSEW_32);
         if (vop_is_reduction(ctrl_i.op)) begin
           reduction_src_q <= src2_i;
           reduction_index_q <= '0;

@@ -14,6 +14,7 @@
 | 정수 divide/remainder | radix-2로 몫 1비트 | 활성 요소당 SEW+준비 클록 | 65비트 compare/subtract + mux |
 | 정수 확장 `vzext/vsext` | source sub-register 선택 후 64비트씩 확장 | 2 compute 클록 + VRF/WB | 입력의 128비트 정렬 mux와 lane sign-extension mux |
 | widening add/sub | narrow source를 2배 EEW로 확장해 64비트씩 add/sub | 2 compute 클록/beat + VRF/WB | 입력 정렬·확장 mux와 SEW64 adder |
+| widening multiply/MAC | narrow source 두 개를 확장해 공통 곱셈 경로에서 계산 | 2 compute 클록/beat + VRF/WB | source 정렬·확장 mux, 64비트 곱셈, 누산 add |
 | FP FMA | 아직 미구현 | 미정 | 2클록 달성 가능 여부도 미검증 |
 
 연산기의 **2 compute 클록**과 명령의 전체 지연은 다릅니다. 1R1W VRF에서
@@ -40,6 +41,9 @@ WB 후 다음 beat로 넘어가므로, 명령 전체가 2클록 안에 끝나지
 6. widening add/sub는 narrow source 정렬과 부호 확장 뒤에 64비트
    add/sub가 이어집니다. 1ns를 넘으면 정렬 결과를 별도 레지스터에 저장해
    연산 클록을 분리하고 결과 지연을 재정의해야 합니다.
+7. multiply/MAC는 signed·unsigned·mixed 결과 선택을 하나의 곱셈식으로
+   합쳤습니다. 이 RTL 변화만으로 물리적으로 곱셈기 하나로 공유되었거나
+   1ns에 들어온다고 판정할 수 없으며, 합성 netlist와 STA로 확인합니다.
 
 ## 사인오프에 필요한 입력과 산출물
 

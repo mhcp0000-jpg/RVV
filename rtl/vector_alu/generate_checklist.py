@@ -83,6 +83,13 @@ NEW_FORMS = {
     "vwadd": {"vv", "vx", "wv", "wx"},
     "vwsubu": {"vv", "vx", "wv", "wx"},
     "vwsub": {"vv", "vx", "wv", "wx"},
+    "vwmulu": {"vv", "vx"},
+    "vwmulsu": {"vv", "vx"},
+    "vwmul": {"vv", "vx"},
+    "vwmaccu": {"vv", "vx"},
+    "vwmacc": {"vv", "vx"},
+    "vwmaccus": {"vx"},
+    "vwmaccsu": {"vv", "vx"},
 }
 
 
@@ -165,7 +172,10 @@ def main() -> None:
                     "vsext.vf2", "vsext.vf4", "vsext.vf8",
                     "vwaddu.vv", "vwadd.vx", "vwsub.wv"
                 } or (base in {"vwaddu", "vwadd", "vwsubu", "vwsub"} and
-                      suffix in {"vv", "vx", "wv", "wx"}) else ""
+                      suffix in {"vv", "vx", "wv", "wx"}) or
+                    (base in {"vwmulu", "vwmulsu", "vwmul", "vwmaccu",
+                              "vwmacc", "vwmaccus", "vwmaccsu"} and
+                     suffix in NEW_FORMS[base]) else ""
             ),
             "spec_corner_test": prior.get("spec_corner_test") or (
                 "m2/m4/m8, masked, vl=0, vstart!=0"
@@ -189,7 +199,10 @@ def main() -> None:
                 "signed scalar widened; negative lanes" if name == "vwadd.vx" else
                 "wide vs2, narrow vs1; destructive vd" if name == "vwsub.wv" else
                 "m1 all lanes, OP-MVV/OP-MVX sweep" if base in {
-                    "vwaddu", "vwadd", "vwsubu", "vwsub"} else ""
+                    "vwaddu", "vwadd", "vwsubu", "vwsub"} else
+                "m1 all lanes; signed/unsigned corners; MAC old vd" if base in {
+                    "vwmulu", "vwmulsu", "vwmul", "vwmaccu", "vwmacc",
+                    "vwmaccus", "vwmaccsu"} else ""
             ),
             "notes": prior.get("notes", ""),
         }

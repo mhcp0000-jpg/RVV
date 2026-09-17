@@ -36,7 +36,7 @@ module vcore_alu_sequencer #(
       VSEW_64: elements_per_beat = VLEN/64;
       default: elements_per_beat = 0;
     endcase
-    if (vop_is_widen_addsub(decoded_q.ctrl.op))
+    if (vop_is_widen_integer(decoded_q.ctrl.op))
       elements_per_beat = elements_per_beat/2;
     mask_dest = vop_is_compare(decoded_q.ctrl.op) ||
                 vop_is_mask_logic(decoded_q.ctrl.op);
@@ -56,12 +56,12 @@ module vcore_alu_sequencer #(
     uop_o.vd_addr = uop_o.ctrl.vd_addr;
     uop_o.vs1_addr = vop_is_reduction(decoded_q.ctrl.op) ? decoded_q.vs1 :
                       5'(int'(decoded_q.vs1) +
-                         (vop_is_widen_addsub(decoded_q.ctrl.op) ?
+                         (vop_is_widen_integer(decoded_q.ctrl.op) ?
                           int'(beat_index_q)/2 : int'(beat_index_q)));
     uop_o.vs2_addr = 5'(int'(decoded_q.vs2) +
                           (vop_is_extension(decoded_q.ctrl.op) ?
                            int'(beat_index_q)/extension_factor :
-                           (vop_is_widen_addsub(decoded_q.ctrl.op) &&
+                           (vop_is_widen_integer(decoded_q.ctrl.op) &&
                             !vop_widen_vs2_wide(decoded_q.ctrl.op)) ?
                            int'(beat_index_q)/2 :
                            int'(beat_index_q)));

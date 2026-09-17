@@ -73,8 +73,9 @@ module vcore_alu_slice #(
     logic signed [63:0] sa, sb;
     logic signed [64:0] signed_sum, signed_min, signed_max;
     logic [64:0] unsigned_sum;
-    logic signed [127:0] round_input, product_s, product_su;
-    logic [127:0] product_u;
+    logic signed [127:0] round_input;
+    logic signed [64:0] multiply_a, multiply_b;
+    logic signed [129:0] multiply_product;
     logic fp_sign, fp_is_nan, fp_is_inf, fp_is_zero, fp_is_subnormal;
     logic fp_b_nan, fp_a_snan, fp_b_snan, fp_equal, fp_less;
     int unsigned shamt;
@@ -92,9 +93,9 @@ module vcore_alu_slice #(
     unsigned_sum = {1'b0,a} + {1'b0,b};
     signed_sum = '0;
     round_input = '0;
-    product_s = '0;
-    product_su = '0;
-    product_u = '0;
+    multiply_a = '0;
+    multiply_b = '0;
+    multiply_product = '0;
     fp_sign = a[31];
     fp_is_nan = (a[30:23] == 8'hff) && (a[22:0] != 0);
     fp_is_inf = (a[30:23] == 8'hff) && (a[22:0] == 0);
@@ -181,33 +182,30 @@ module vcore_alu_slice #(
         round_input = {{64{sa[63]}},sa};
         ret.value = round_shift(round_input,shamt,vxrm,1'b1);
       end
-      VOP_SMUL: begin
-        product_s = sa * sb;
-        ret.sat = (a == (64'd1 << (width-1))) &&
-                  (b == (64'd1 << (width-1)));
-        ret.value = ret.sat ? signed_max[63:0] :
-                    round_shift(product_s,width-1,vxrm,1'b1);
-      end
-      VOP_MUL, VOP_MULHU, VOP_MULHSU, VOP_MULH,
+      VOP_SMUL, VOP_MUL, VOP_MULHU, VOP_MULHSU, VOP_MULH,
       VOP_MADD, VOP_NMSUB, VOP_MACC, VOP_NMSAC: begin
-        product_u = 128'(a) * 128'(b);
-        product_s = sa * sb;
-        product_su = sa * $signed({1'b0,b});
+        // One signed 65x65 path covers signed, unsigned and mixed products.
+        // The extra sign bit makes a full unsigned 64-bit operand positive.
+        multiply_a = (op == VOP_SMUL || op == VOP_MULH ||
+                      op == VOP_MULHSU) ?
+                     $signed({sa[63],sa}) :
+                     $signed({1'b0,((op == VOP_MADD || op == VOP_NMSUB) ?
+                                    old_value : a)});
+        multiply_b = (op == VOP_SMUL || op == VOP_MULH) ?
+                     $signed({sb[63],sb}) : $signed({1'b0,b});
+        multiply_product = multiply_a * multiply_b;
+        ret.sat = (a == (64'd1 << (width-1))) &&
+                  (b == (64'd1 << (width-1))) && (op == VOP_SMUL);
         case (op)
-          VOP_MUL:    ret.value = product_u[63:0];
-          VOP_MULHU:  ret.value = 64'(product_u >> width);
-          VOP_MULHSU: ret.value = 64'(product_su >>> width);
-          VOP_MULH:   ret.value = 64'(product_s >>> width);
-          VOP_MACC:   ret.value = old_value + product_u[63:0];
-          VOP_NMSAC:  ret.value = old_value - product_u[63:0];
-          VOP_MADD: begin
-            product_u = 128'(old_value) * 128'(b);
-            ret.value = a + product_u[63:0];
-          end
-          VOP_NMSUB: begin
-            product_u = 128'(old_value) * 128'(b);
-            ret.value = a - product_u[63:0];
-          end
+          VOP_SMUL: ret.value = ret.sat ? signed_max[63:0] :
+                      round_shift(multiply_product[127:0],width-1,vxrm,1'b1);
+          VOP_MUL:    ret.value = multiply_product[63:0];
+          VOP_MULHU, VOP_MULHSU, VOP_MULH:
+            ret.value = 64'(multiply_product >>> width);
+          VOP_MACC:   ret.value = old_value + multiply_product[63:0];
+          VOP_NMSAC:  ret.value = old_value - multiply_product[63:0];
+          VOP_MADD:   ret.value = a + multiply_product[63:0];
+          VOP_NMSUB:  ret.value = a - multiply_product[63:0];
           default: ;
         endcase
       end

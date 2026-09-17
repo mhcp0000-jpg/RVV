@@ -108,6 +108,13 @@ package vcore_alu_pkg;
     VOP_WADD_W   = 8'd93,
     VOP_WSUBU_W  = 8'd94,
     VOP_WSUB_W   = 8'd95,
+    VOP_WMULU    = 8'd96,
+    VOP_WMULSU   = 8'd97,
+    VOP_WMUL     = 8'd98,
+    VOP_WMACCU   = 8'd99,
+    VOP_WMACC    = 8'd100,
+    VOP_WMACCUS  = 8'd101,
+    VOP_WMACCSU  = 8'd102,
     VOP_INVALID  = 8'hff
   } vop_e;
 
@@ -288,6 +295,33 @@ package vcore_alu_pkg;
     endcase
   endfunction
 
+  function automatic logic vop_is_widen_mul(input logic [7:0] op);
+    case (op)
+      VOP_WMULU, VOP_WMULSU, VOP_WMUL, VOP_WMACCU,
+      VOP_WMACC, VOP_WMACCUS, VOP_WMACCSU: return 1'b1;
+      default: return 1'b0;
+    endcase
+  endfunction
+
+  function automatic logic vop_is_widen_integer(input logic [7:0] op);
+    return vop_is_widen_addsub(op) || vop_is_widen_mul(op);
+  endfunction
+
+  function automatic logic vop_widen_mul_vs2_signed(input logic [7:0] op);
+    return (op == VOP_WMULSU) || (op == VOP_WMUL) ||
+           (op == VOP_WMACC) || (op == VOP_WMACCUS);
+  endfunction
+
+  function automatic logic vop_widen_mul_vs1_signed(input logic [7:0] op);
+    return (op == VOP_WMUL) || (op == VOP_WMACC) ||
+           (op == VOP_WMACCSU);
+  endfunction
+
+  function automatic logic vop_widen_mul_accumulate(input logic [7:0] op);
+    return (op == VOP_WMACCU) || (op == VOP_WMACC) ||
+           (op == VOP_WMACCUS) || (op == VOP_WMACCSU);
+  endfunction
+
   function automatic logic vop_widen_vs2_wide(input logic [7:0] op);
     return (op == VOP_WADDU_W) || (op == VOP_WADD_W) ||
            (op == VOP_WSUBU_W) || (op == VOP_WSUB_W);
@@ -327,7 +361,9 @@ package vcore_alu_pkg;
       VOP_ZEXT2, VOP_ZEXT4, VOP_ZEXT8,
       VOP_SEXT2, VOP_SEXT4, VOP_SEXT8,
       VOP_WADDU, VOP_WADD, VOP_WSUBU, VOP_WSUB,
-      VOP_WADDU_W, VOP_WADD_W, VOP_WSUBU_W, VOP_WSUB_W:
+      VOP_WADDU_W, VOP_WADD_W, VOP_WSUBU_W, VOP_WSUB_W,
+      VOP_WMULU, VOP_WMULSU, VOP_WMUL,
+      VOP_WMACCU, VOP_WMACC, VOP_WMACCUS, VOP_WMACCSU:
         return 1'b1;
       default: return 1'b0;
     endcase

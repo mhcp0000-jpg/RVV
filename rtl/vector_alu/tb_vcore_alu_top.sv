@@ -556,6 +556,61 @@ module tb_vcore_alu_top;
       $fatal(1,"widen high-end overlap/forced agnostic mismatch %h %h",
              mem[24],mem[25]);
 
+    // Every widening multiply/MAC encoding: signed and unsigned inputs are
+    // checked independently against 64-bit scalar reference arithmetic.
+    begin : widening_mul_sweep
+      int wanted;
+      logic [15:0] raw_vs2, raw_vs1;
+      longint signed a_value, b_value, expected_value;
+      logic vs2_signed, vs1_signed, accumulate;
+      wanted = 114;
+      mem[2] = {16'd4,16'd2,16'hffff,16'd1,
+                16'h7fff,16'h8000,16'd3,16'hfffe};
+      mem[4] = {16'd7,16'd6,16'd5,16'h8000,
+                16'd4,16'd3,16'hffff,16'd2};
+      cmd.sew = VSEW_16;
+      cmd.vlmul = 3'b000;
+      cmd.vl = 8;
+      cmd.scalar = 32'h0000_fffe;
+      cmd.mask_snapshot = '1;
+      for (int opcode=32'h38; opcode<=32'h3f; opcode++) begin
+        for (int form=0; form<2; form++) begin
+          if (opcode!=32'h39 && !(opcode==32'h3e && form==0)) begin
+            mem[20] = {4{32'd100}};
+            mem[21] = {4{32'd100}};
+            cmd.inst = {6'(opcode),1'b1,5'd2,
+                        (form==0 ? 5'd4 : 5'd3),
+                        (form==0 ? 3'b010 : 3'b110),5'd20,7'h57};
+            cmd.tag = 16'(32'ha0 + (opcode-32'h38)*2 + form);
+            send_command();
+            wanted += 2;
+            await_commits(wanted);
+            vs2_signed = (opcode==32'h3a) || (opcode==32'h3b) ||
+                         (opcode==32'h3d) || (opcode==32'h3e);
+            vs1_signed = (opcode==32'h3b) || (opcode==32'h3d) ||
+                         (opcode==32'h3f);
+            accumulate = opcode>=32'h3c;
+            for (int lane_index=0; lane_index<8; lane_index++) begin
+              raw_vs2 = mem[2][lane_index*16 +: 16];
+              raw_vs1 = (form==0) ? mem[4][lane_index*16 +: 16] : 16'hfffe;
+              a_value = vs2_signed ? 64'($signed(raw_vs2)) : 64'(raw_vs2);
+              b_value = vs1_signed ? 64'($signed(raw_vs1)) : 64'(raw_vs1);
+              expected_value = a_value*b_value + (accumulate ? 64'd100 : 64'd0);
+              if (mem[20+lane_index/4][(lane_index%4)*32 +: 32] !==
+                  32'(expected_value))
+                $fatal(1,"widen mul/MAC funct6=%h form=%0d lane=%0d got=%h expected=%h",
+                       opcode,form,lane_index,
+                       mem[20+lane_index/4][(lane_index%4)*32 +: 32],
+                       expected_value);
+            end
+          end
+        end
+      end
+      if (wanted != 140 || write_count != 117 || illegal_count != 5)
+        $fatal(1,"widen mul/MAC encoding sweep incomplete: commits=%0d writes=%0d",
+               wanted,write_count);
+    end
+
     $display("tb_vcore_alu_top PASS");
     $finish;
   end

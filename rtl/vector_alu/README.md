@@ -29,6 +29,7 @@ Decode ──► Issue FIFO (기본 3개) ──► LMUL Sequencer
 - 일반 reduction은 source LMUL의 모든 beat를 하나의 누산기에 전달하고, 마지막 beat에서만 `vd[0]`을 씁니다. `vl=0`이면 VRF를 쓰지 않습니다. `vstart!=0`인 reduction은 illegal입니다. mask 논리와 `vcpop.m`/`vfirst.m`은 LMUL과 관계없이 마스크 레지스터 한 개를 읽습니다.
 - `vzext.vf2/vf4/vf8`와 `vsext.vf2/vf4/vf8`는 source EEW=`SEW/factor`, source EMUL=`LMUL/factor`로 주소를 계산합니다. 여러 destination beat가 한 source 레지스터를 공유할 수 있으며, 서로 다른 EEW의 source/destination 그룹이 겹치면 source EMUL≥1이고 두 그룹의 최고 번호 레지스터가 같을 때만 허용합니다. source EMUL이 fractional인 overlap은 거부합니다.
 - `vwaddu/vwadd/vwsubu/vwsub`의 `.vv/.vx/.wv/.wx`는 source SEW의 두 배를 destination EEW로 사용합니다. 정수 LMUL m1/m2/m4의 destination 그룹은 각각 2/4/8개 레지스터이고, m8은 EMUL 제한으로 거부합니다. `.wv/.wx`의 `vs2`는 이미 넓은 EEW로 읽습니다. 서로 다른 EEW 그룹이 합법적으로 겹치면 해당 명령의 비활성 mask 및 tail 결과는 agnostic으로 처리합니다.
+- `vwmulu/vwmulsu/vwmul/vwmaccu/vwmacc/vwmaccus/vwmaccsu`의 13개 형식도 같은 widening beat·VRF 주소 경로를 사용합니다. 명령별 signed/unsigned 조합으로 source를 2×SEW로 확장한 뒤, 기존 정수 multiply/MAC 연산 경로에서 하위 2×SEW 결과를 사용합니다.
 - FIFO 깊이는 `ISSUE_DEPTH` 파라미터로 정합니다(최소 2). 데이터 폭은 현재 패키지의 mask snapshot과 연결되어 **VLEN=128 고정**이며, 다른 VLEN은 재설계가 필요합니다.
 
 ## TOP 입력 계약

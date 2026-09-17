@@ -167,6 +167,16 @@ module vcore_alu_decode #(
         6'h35: decoded_o.ctrl.op = VOP_WADD_W;
         6'h36: decoded_o.ctrl.op = VOP_WSUBU_W;
         6'h37: decoded_o.ctrl.op = VOP_WSUB_W;
+        6'h38: decoded_o.ctrl.op = VOP_WMULU;
+        6'h3a: decoded_o.ctrl.op = VOP_WMULSU;
+        6'h3b: decoded_o.ctrl.op = VOP_WMUL;
+        6'h3c: decoded_o.ctrl.op = VOP_WMACCU;
+        6'h3d: decoded_o.ctrl.op = VOP_WMACC;
+        6'h3e: begin
+          decoded_o.ctrl.op = VOP_WMACCUS;
+          operation_valid &= (funct3 == 3'b110);
+        end
+        6'h3f: decoded_o.ctrl.op = VOP_WMACCSU;
         default: operation_valid = 1'b0;
       endcase
       if (vop_is_mask_logic(decoded_o.ctrl.op))
@@ -225,7 +235,7 @@ module vcore_alu_decode #(
                        vop_is_mask_logic(decoded_o.ctrl.op)) ?
                       4'd1 : beats;
     dest_group_beats = (fraction_div == 1) ? 2*int'(beats) : 1;
-    if (vop_is_widen_addsub(decoded_o.ctrl.op))
+    if (vop_is_widen_integer(decoded_o.ctrl.op))
       decoded_o.beats = 4'(dest_group_beats);
     max_elements = (sew_bits == 0) ? 0 : ((VLEN / sew_bits) * int'(beats)) / fraction_div;
     if (max_elements == 0 || int'(cmd_i.vl) > max_elements || cmd_i.vill)
@@ -252,7 +262,7 @@ module vcore_alu_decode #(
         decoded_o.ctrl.vma = 1'b1;
       end
     end
-    if (vop_is_widen_addsub(decoded_o.ctrl.op)) begin
+    if (vop_is_widen_integer(decoded_o.ctrl.op)) begin
       vd_end = vd_begin + dest_group_beats - 1;
       vs2_group_beats = vop_widen_vs2_wide(decoded_o.ctrl.op) ?
                         dest_group_beats : int'(beats);
@@ -294,19 +304,19 @@ module vcore_alu_decode #(
       operation_valid = 1'b0;
     if (beats > 1) begin
       if ((!vop_is_compare(decoded_o.ctrl.op) &&
-           !vop_is_widen_addsub(decoded_o.ctrl.op) &&
+           !vop_is_widen_integer(decoded_o.ctrl.op) &&
            !vop_is_mask_logic(decoded_o.ctrl.op) &&
            !vop_is_reduction(decoded_o.ctrl.op) &&
            !vop_is_scalar_mask_reduce(decoded_o.ctrl.op) &&
            (int'(decoded_o.vd) % int'(beats)) != 0) ||
           ((decoded_o.ctrl.op != VOP_COPY_B) &&
-           !vop_is_widen_addsub(decoded_o.ctrl.op) &&
+           !vop_is_widen_integer(decoded_o.ctrl.op) &&
            !vop_is_extension(decoded_o.ctrl.op) &&
            !vop_is_mask_logic(decoded_o.ctrl.op) &&
            !vop_is_scalar_mask_reduce(decoded_o.ctrl.op) &&
            (int'(decoded_o.vs2) % int'(beats)) != 0) ||
           (form_vv && !vop_is_extension(decoded_o.ctrl.op) &&
-           !vop_is_widen_addsub(decoded_o.ctrl.op) &&
+           !vop_is_widen_integer(decoded_o.ctrl.op) &&
            !vop_is_reduction(decoded_o.ctrl.op) &&
            !vop_is_mask_logic(decoded_o.ctrl.op) &&
            !vop_is_scalar_mask_reduce(decoded_o.ctrl.op) &&
