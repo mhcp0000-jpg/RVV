@@ -107,8 +107,10 @@ module vcore_perm_decode #(
       6'h10: begin // vmv.x.s,vfmv.f.s / vmv.s.x,vfmv.s.f (vcpop.m/vfirst.m rejected)
         unique case (funct3)
           3'b010, 3'b001: begin
-            if (vs1_f == 5'h00) decoded_o.ctrl.op = VPOP_VMV_X_S;
-            else operation_valid = 1'b0; // vcpop.m / vfirst.m -> different cluster
+            if (vs1_f == 5'h00) begin
+              decoded_o.ctrl.op = VPOP_VMV_X_S;
+              decoded_o.ctrl.is_fp = (funct3 == 3'b001); // 001=OPFVV(vfmv.f.s)->FPR, 010=OPMVV(vmv.x.s)->GPR
+            end else operation_valid = 1'b0; // vcpop.m / vfirst.m -> different cluster
           end
           3'b110, 3'b101: begin decoded_o.ctrl.op = VPOP_VMV_S_X; decoded_o.form = VSRC_VX; end
           default: operation_valid = 1'b0;
@@ -117,6 +119,7 @@ module vcore_perm_decode #(
       6'h27: begin // whole-register move: vs1 field encodes nreg-1 (0/1/3/7)
         if (funct3 == 3'b011) begin
           decoded_o.ctrl.op = VPOP_VMVNR;
+          decoded_o.beats = 4'd1; // safe default so an invalid vs1_f below can't leave beats==0
           unique case (vs1_f)
             5'd0: decoded_o.beats = 4'd1;
             5'd1: decoded_o.beats = 4'd2;
@@ -161,19 +164,75 @@ module vcore_perm_decode #(
       default: operation_valid = 1'b0;
     endcase
 
+    // group_regs reflects the real LMUL grouping regardless of the
+    // single-beat override below; vcore_perm_sequencer re-derives its own
+    // copy from decoded.beats independently, this one is only for the
+    // ei16 index-register legality check right after.
+    decoded_o.ctrl.group_regs = beats;
+
     // Whole-register move ignores vtype/vl entirely; beats was already set
     // above from the vs1-encoded register count, not from vlmul.
     if (!vpop_bypass_vtype(decoded_o.ctrl.op)) begin
-      decoded_o.beats = beats;
+      // vl's legal range is still governed by the real LMUL grouping (max_elements
+      // below), even for vmsbf/vmsof/vmsif whose own operands never group --
+      // only the sequencer's iteration count collapses to a single beat for them.
+      decoded_o.beats = vpop_single_beat(decoded_o.ctrl.op) ? 4'd1 : beats;
       max_elements = (sew_bits == 0) ? 0 : ((VLEN / sew_bits) * int'(beats)) / fraction_div;
       if (max_elements == 0 || int'(cmd_i.vl) > max_elements || cmd_i.vill)
         operation_valid = 1'b0;
+      // vd/vs2/vs1 must each be aligned to a multiple of beats ONLY when that
+      // operand actually groups with LMUL. viota's vs2, vcompress's vs1 and
+      // vmsbf/vmsof/vmsif's vd are single non-grouping mask registers (see
+      // vpop_vs2_is_mask_src/vpop_vs1_is_mask_src/vpop_is_mask_dest) and are
+      // exempt -- otherwise, e.g., "viota.m v4, v1" at LMUL=2 (vs2=1) would
+      // be wrongly rejected even though v1 is never grouped.
       if (beats > 1) begin
-        if ((int'(decoded_o.vd) % int'(beats)) != 0 ||
-            (int'(decoded_o.vs2) % int'(beats)) != 0 ||
-            (decoded_o.form == VSRC_VV && (int'(decoded_o.vs1) % int'(beats)) != 0))
+        if ((!vpop_is_mask_dest(decoded_o.ctrl.op) && (int'(decoded_o.vd) % int'(beats)) != 0) ||
+            (!vpop_vs2_is_mask_src(decoded_o.ctrl.op) && (int'(decoded_o.vs2) % int'(beats)) != 0) ||
+            (decoded_o.form == VSRC_VV && !vpop_vs1_is_mask_src(decoded_o.ctrl.op) &&
+             (int'(decoded_o.vs1) % int'(beats)) != 0))
           operation_valid = 1'b0;
       end
+
+      // vrgatherei16's index operand (vs1, EEW=16) can need more physical
+      // registers than the data group when SEW<16 -- reject combinations
+      // the group buffer (sized MAXLMUL registers) can't hold.
+      if (decoded_o.ctrl.op == VPOP_VRGATHEREI16) begin
+        if (vpop_ei16_idx_regs(decoded_o.ctrl, VLEN) > MAXLMUL)
+          operation_valid = 1'b0;
+      end
+
+      // Destination-overlaps-source is illegal for gather/slide/compress:
+      // an implementation may read and route source elements out of order,
+      // so vd must not alias any register vs2 (or the grouping vs1 index/
+      // compress mask-select) will be read from during the same instruction.
+      unique case (decoded_o.ctrl.op)
+        VPOP_VRGATHER, VPOP_VRGATHEREI16,
+        VPOP_VSLIDEUP, VPOP_VSLIDEDOWN, VPOP_VSLIDE1UP, VPOP_VSLIDE1DOWN: begin
+          if (regs_overlap(decoded_o.vd, int'(beats), decoded_o.vs2, int'(beats)))
+            operation_valid = 1'b0;
+          if (decoded_o.form == VSRC_VV) begin
+            if (decoded_o.ctrl.op == VPOP_VRGATHEREI16) begin
+              if (regs_overlap(decoded_o.vd, int'(beats), decoded_o.vs1,
+                                vpop_ei16_idx_regs(decoded_o.ctrl, VLEN)))
+                operation_valid = 1'b0;
+            end else if (regs_overlap(decoded_o.vd, int'(beats), decoded_o.vs1, int'(beats)))
+              operation_valid = 1'b0;
+          end
+        end
+        VPOP_VCOMPRESS: begin
+          if (regs_overlap(decoded_o.vd, int'(beats), decoded_o.vs2, int'(beats)) ||
+              regs_overlap(decoded_o.vd, int'(beats), decoded_o.vs1, 1))
+            operation_valid = 1'b0;
+        end
+        default: ;
+      endcase
+    end else begin
+      // VPOP_VMVNR: vd and vs2 must each be aligned to a multiple of the
+      // whole-register count (decoded_o.beats, set from the vs1 field above).
+      if (int'(decoded_o.vd) % int'(decoded_o.beats) != 0 ||
+          int'(decoded_o.vs2) % int'(decoded_o.beats) != 0)
+        operation_valid = 1'b0;
     end
 
     decoded_o.illegal = !operation_valid;

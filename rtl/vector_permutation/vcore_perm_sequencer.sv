@@ -42,6 +42,7 @@ module vcore_perm_sequencer #(
     uop_o = '0;
     uop_o.ctrl = decoded_q.ctrl;
     uop_o.ctrl.element_base = 17'(int'(beat_index_q) * elements_per_beat);
+    uop_o.ctrl.group_regs = total_beats_q;
     uop_o.ctrl.last_beat = (int'(beat_index_q)+1 == int'(total_beats_q));
     uop_o.ctrl.vd_addr = mask_dest ? decoded_q.vd :
                               5'(int'(decoded_q.vd) + int'(beat_index_q));
@@ -49,8 +50,15 @@ module vcore_perm_sequencer #(
     uop_o.scalar = decoded_q.scalar;
     uop_o.mask_snapshot = decoded_q.mask_snapshot;
     uop_o.vd_addr  = uop_o.ctrl.vd_addr;
-    uop_o.vs1_addr = 5'(int'(decoded_q.vs1) + int'(beat_index_q));
-    uop_o.vs2_addr = 5'(int'(decoded_q.vs2) + int'(beat_index_q));
+    // vcompress's vs1 (mask-select) and viota/vmsbf/vmsof/vmsif's vs2
+    // (mask-to-scan) are mask operands: they never group with LMUL, so the
+    // address stays fixed across beats while local lane i is reinterpreted
+    // at global bit offset element_base+i inside vcore_perm_core.
+    uop_o.vs1_addr = vpop_vs1_is_mask_src(decoded_q.ctrl.op) ? decoded_q.vs1 :
+                              5'(int'(decoded_q.vs1) + int'(beat_index_q));
+    uop_o.vs2_addr = vpop_vs2_is_mask_src(decoded_q.ctrl.op) ? decoded_q.vs2 :
+                              5'(int'(decoded_q.vs2) + int'(beat_index_q));
+    uop_o.vs2_base_addr = decoded_q.vs2; // un-adjusted base, for group preload (see vpop_needs_group_buf)
 
     // vs1 is only a real vector register on VSRC_VV encodings (vrgather.vv,
     // vrgatherei16.vv, vcompress.vm's mask-select, vmerge.vvm, vmv.v.v).
