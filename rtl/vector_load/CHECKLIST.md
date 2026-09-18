@@ -23,6 +23,10 @@ cmd ─► decode ─► issue_fifo ─► sequencer ─► memreq ─► pipe �
 
 ## 1. 지원 범위 (결정된 스코프)
 
+공식 `rv_v` opcode 파일 기준 벡터 로드 인코딩은 **177개**이고, 이 클러스터는 그중 **5개**를
+구현합니다. 나머지 172개는 `illegal_op`으로 보고하며, 그 거부가 vtype 전 구간에서
+유지되는지는 §6.5의 `tb_vcore_vld_decode_table`이 9,990 probe로 확인합니다.
+
 지원:
 - `vle8.v` / `vle16.v` / `vle32.v` / `vle64.v`  (mop=00, lumop=00000)
 - `vlm.v`                                       (mop=00, lumop=01011)
@@ -170,6 +174,72 @@ TOTAL: 15 passed, 0 failed
 
 ### Lint
 `verilator --lint-only -Wall -Wno-UNUSEDSIGNAL` clean (RTL 9개 파일 전부).
+
+### 전체 회귀 요약
+
+| 테스트 | 케이스 | 결과 |
+|---|---:|---|
+| `tb_vcore_vld_ref` (ideal) | 2,433 | 전부 통과 |
+| `tb_vcore_vld_ref` (stress, MAX_OUT 1/2/4/8/16/32) | 2,433 &times; 6 | 전부 통과 |
+| `tb_vcore_vld_top` (directed) | 15 | 전부 통과 |
+| `tb_vcore_vld_decode_table` (공식 인코딩) | 9,990 | 전부 통과 |
+
+## 6.5 공식 인코딩 체크리스트 (`tb_vcore_vld_decode_table`)
+
+ALU 쪽 `generate_checklist.py` / `verify_decode_table.py` / `tb_vcore_alu_decode_table.sv`와
+같은 장치를 Load에도 붙였습니다.
+
+| 파일 | 역할 |
+|---|---|
+| `generate_load_checklist.py` | 고정 커밋(`f5befa2`)의 공식 `rv_v` opcode 파일에서 LOAD-FP(0x07) 인코딩을 추출. `nf`가 가변인 행은 RVV 1.0이 이름을 주는 segment 변형으로 전개 → **177개**. `RVV_LOAD_CHECKLIST.csv` + `RVV_LOAD_PROGRESS.md` 생성 |
+| `verify_load_decode_table.py` | 체크리스트 각 행에서 실제 명령어 워드와 기대 accept/reject, vtype 벡터를 생성 |
+| `tb_vcore_vld_decode_table.sv` | 전부 `vcore_vld_decode`에 넣고 `illegal` 출력을 대조 |
+| `dectab.sh` | 위 셋을 순서대로 실행 |
+
+**177개는 독립적으로 검증된 숫자입니다.** 공식 opcode 파일에서 유도한 니모닉 집합이
+저장소의 명령어 카탈로그(`outputs/rvv_instruction_20260916`) Load 행 177개와 **정확히 일치**합니다
+(양쪽 차집합 모두 공집합).
+
+| 연산군 | 인코딩 | 구현 |
+|---|---:|---:|
+| Unit-stride | 4 | **4** |
+| Mask memory (`vlm.v`) | 1 | **1** |
+| Strided | 4 | 0 |
+| Indexed unordered | 4 | 0 |
+| Indexed ordered | 4 | 0 |
+| Fault-only-first | 32 | 0 |
+| Whole register | 16 | 0 |
+| Segment unit-stride | 28 | 0 |
+| Segment strided | 28 | 0 |
+| Segment indexed unordered | 28 | 0 |
+| Segment indexed ordered | 28 | 0 |
+| **합계** | **177** | **5** |
+
+검사 그룹 4개, 총 **9,990 probe**:
+
+1. 177개 인코딩 전부, unmasked (`vm=1`)
+2. 같은 177개, `vm=0` — `vlm.v`와 whole-register 행은 인코딩이 `vm=1`을 고정하므로
+   이 pass에서는 **예약 인코딩**이 되어 거부되어야 함
+3. 같은 opcode를 쓰는 스칼라 FP 로드 4개 (`flh`/`flw`/`fld`/`flq`, width 001/010/011/100)
+4. 범위 밖 172개 × SEW 4가지 × LMUL 7가지 × `vm` 2가지 = 9,632 probe.
+   **범위 밖 인코딩의 거부는 vtype과 무관해야 하므로 이 그룹은 별도 합법성 모델이 필요 없고**,
+   특정 SEW/LMUL에서만 예약 필드가 새어나가는 경우를 잡습니다.
+
+```
+tb_vcore_vld_decode_table: 9990 probes, 9 accepted, 9981 rejected, 0 failed
+```
+
+accept 9개 = unmasked 5개(`vle8/16/32/64.v` + `vlm.v`) + masked 4개(`vle*.v`).
+`vlm.v`는 `vm=0`에서 올바르게 거부됩니다.
+
+각 probe는 세 가지를 같이 확인합니다: (가) `illegal`이 기대와 일치, (나) accept된 행은
+`beats != 0`, (다) reject된 행은 `ctrl.op`가 `VLDOP_INVALID`로 남아 죽은 opcode를
+흘리지 않음.
+
+범위 내 5개의 vtype별 합법성(EMUL 경계, vd 정렬, `vl <= VLMAX`)은 이 표가 아니라
+`tb_vcore_vld_ref` sweep 1이 **독립 모델**로 2,240 케이스 대조합니다 — 여기서 같은
+규칙을 또 구현하면 자기 자신과 합의하게 되므로 일부러 나눴습니다.
+
 
 ## 7. 알려진 한계 / 다음 단계 (주의사항)
 
