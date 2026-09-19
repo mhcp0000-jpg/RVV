@@ -95,12 +95,17 @@ NEW_FORMS = {
     "vnclipu": {"wv", "wx", "wi"},
     "vnclip": {"wv", "wx", "wi"},
     "vfredmin": {"vs"}, "vfredmax": {"vs"},
+    "vfredusum": {"vs"}, "vfredosum": {"vs"},
     "vfadd": {"vv", "vf"}, "vfsub": {"vv", "vf"},
     "vfrsub": {"vf"}, "vfmul": {"vv", "vf"},
     "vfmadd": {"vv", "vf"}, "vfnmadd": {"vv", "vf"},
     "vfmsub": {"vv", "vf"}, "vfnmsub": {"vv", "vf"},
     "vfmacc": {"vv", "vf"}, "vfnmacc": {"vv", "vf"},
     "vfmsac": {"vv", "vf"}, "vfnmsac": {"vv", "vf"},
+    "vfcvt": {"xu.f.v", "x.f.v", "f.xu.v", "f.x.v",
+               "rtz.xu.f.v", "rtz.x.f.v"},
+    "vfdiv": {"vv", "vf"}, "vfrdiv": {"vf"}, "vfsqrt": {"v"},
+    "vfrec7": {"v"}, "vfrsqrt7": {"v"},
 }
 
 
@@ -182,7 +187,8 @@ def main() -> None:
                     "vzext.vf2", "vzext.vf4", "vzext.vf8",
                     "vsext.vf2", "vsext.vf4", "vsext.vf8",
                     "vwaddu.vv", "vwadd.vx", "vwsub.wv",
-                    "vfredmin.vs", "vfredmax.vs"
+                    "vfredmin.vs", "vfredmax.vs",
+                    "vfredusum.vs", "vfredosum.vs"
                 } or (base in {"vwaddu", "vwadd", "vwsubu", "vwsub"} and
                       suffix in {"vv", "vx", "wv", "wx"}) or
                     (base in {"vwmulu", "vwmulsu", "vwmul", "vwmaccu",
@@ -193,6 +199,11 @@ def main() -> None:
                     (base in {"vfadd", "vfsub", "vfrsub", "vfmul",
                               "vfmadd", "vfnmadd", "vfmsub", "vfnmsub",
                               "vfmacc", "vfnmacc", "vfmsac", "vfnmsac"} and
+                     suffix in NEW_FORMS[base]) or
+                    (base == "vfcvt" and suffix in NEW_FORMS[base]) or
+                    (base in {"vfdiv", "vfrdiv", "vfsqrt"} and
+                     suffix in NEW_FORMS[base]) or
+                    (base in {"vfrec7", "vfrsqrt7"} and
                      suffix in NEW_FORMS[base]) else ""
             ),
             "spec_corner_test": prior.get("spec_corner_test") or (
@@ -205,6 +216,8 @@ def main() -> None:
                 "m2, unaligned mask registers, tail bits" if name == "vmxor.mm" else
                 "m2, NaN/zero, mask and fflags" if name in {
                     "vfredmin.vs", "vfredmax.vs"} else
+                "m2 seed carry, masked sNaN seed, ordered shared FMA" if name in {
+                    "vfredusum.vs", "vfredosum.vs"} else
                 "masked lanes, divide by 2" if name == "vdivu.vx" else
                 "scalar FP32 sign bits" if name == "vfsgnj.vf" else
                 "zero, infinity, sNaN, qNaN" if name == "vfclass.v" else
@@ -228,7 +241,12 @@ def main() -> None:
                 "shared fused FP32 path; all forms, frm, NV/OF/UF/NX, m2" if base in {
                     "vfadd", "vfsub", "vfrsub", "vfmul", "vfmadd",
                     "vfnmadd", "vfmsub", "vfnmsub", "vfmacc", "vfnmacc",
-                    "vfmsac", "vfnmsac"} else ""
+                    "vfmsac", "vfnmsac"} else
+                "all four lanes; NX, signed/unsigned saturation, NaN, RTZ" if base == "vfcvt" else
+                "iterative shared unit; vv/vf, DZ/NV, mask" if base in {
+                    "vfdiv", "vfrdiv", "vfsqrt"} else
+                "RVV 1.0 128-entry LUT; normal/subnormal examples, NV/DZ/OF/NX" if base in {
+                    "vfrec7", "vfrsqrt7"} else ""
             ),
             "notes": prior.get("notes", ""),
         }

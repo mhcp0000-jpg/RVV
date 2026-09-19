@@ -6,7 +6,9 @@ module vcore_alu_reduce_step (
   input  logic [63:0]                      accumulator_i,
   input  vcore_alu_pkg::vcore_alu_ctrl_t  ctrl_i,
   output logic [63:0]                      accumulator_o,
-  output logic                             invalid_o
+  output logic                             invalid_o,
+  output logic [31:0]                      fp_element_o,
+  output logic                             active_o
 );
   import vcore_alu_pkg::*;
 
@@ -93,6 +95,8 @@ module vcore_alu_reduce_step (
     accumulator_o = acc;
     active = (source_width != 0) && (global_index < ctrl_i.vl) &&
              (ctrl_i.vm || mask_i[global_index[6:0]]);
+    fp_element_o = element[31:0];
+    active_o = active;
     invalid_o = active &&
                 (ctrl_i.op == VOP_FREDMIN || ctrl_i.op == VOP_FREDMAX) &&
                 (fp_acc_snan || fp_elem_snan);

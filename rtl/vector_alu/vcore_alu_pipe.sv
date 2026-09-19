@@ -21,7 +21,7 @@ module vcore_alu_pipe #(
 
   typedef enum logic [2:0] {
     PHASE_LOW, PHASE_HIGH, PHASE_REDUCE, PHASE_MASK_REDUCE,
-    PHASE_DIV_PREP, PHASE_DIV_STEP
+    PHASE_DIV_PREP, PHASE_DIV_STEP, PHASE_FP_DIV_PREP, PHASE_FP_DIV_WAIT
   } phase_e;
   phase_e phase_q;
   logic rsp_valid_q;
@@ -37,8 +37,10 @@ module vcore_alu_pipe #(
   logic low_vxsat_q;
   logic [4:0] low_fflags_q;
   logic illegal_q;
-  logic [63:0] reduction_acc_q, reduction_next;
-  logic reduction_invalid, reduction_invalid_q;
+  logic [63:0] reduction_acc_q, reduction_next, reduction_step_next;
+  logic reduction_invalid, reduction_active;
+  logic [31:0] reduction_element, fp_reduce_result;
+  logic [4:0] reduction_flags, reduction_flags_q, fp_reduce_flags;
   logic [VLEN-1:0] reduction_src_q;
   logic [4:0] reduction_index_q, reduction_elements;
   logic [1:0] mask_chunk_q;
@@ -59,6 +61,12 @@ module vcore_alu_pipe #(
   logic [63:0] div_quotient_next;
   logic div_quotient_bit;
   int unsigned div_width;
+  logic [VLEN-1:0] fp_div_src1_q, fp_div_src2_q, fp_div_result_q;
+  logic [4:0] fp_div_flags_q, fp_div_flags;
+  logic [2:0] fp_div_index_q;
+  logic [16:0] fp_div_global_index;
+  logic [31:0] fp_div_a, fp_div_b, fp_div_value;
+  logic fp_div_active, fp_div_in_valid, fp_div_in_ready, fp_div_out_valid;
 
   logic [SLICE_W-1:0] slice_src1, slice_src2, slice_old;
   logic [VLEN-1:0] prepared_src1, prepared_src2;
@@ -237,15 +245,26 @@ module vcore_alu_pipe #(
     .src1_i(slice_src1), .src2_i(slice_src2),
     .old_data_i(slice_old), .mask_i(slice_mask),
     .high_half_i(phase_q == PHASE_HIGH), .ctrl_i(slice_ctrl),
-    .data_o(fp_data), .fflags_o(fp_fflags)
+    .reduce_mode_i((phase_q == PHASE_REDUCE) &&
+                   vop_is_fp_sum_reduce(ctrl_q.op)),
+    .reduce_acc_i(reduction_acc_q[31:0]),
+    .reduce_element_i(reduction_element),
+    .data_o(fp_data), .fflags_o(fp_fflags),
+    .reduce_result_o(fp_reduce_result), .reduce_flags_o(fp_reduce_flags)
   );
   assign slice_data = vop_is_narrow(slice_ctrl.op) ? narrow_data :
-                      vop_is_fp_arith(slice_ctrl.op) ? fp_data : regular_data;
+                      (vop_is_fp_arith(slice_ctrl.op) ||
+                       vop_is_fp_convert(slice_ctrl.op) ||
+                       vop_is_fp_estimate(slice_ctrl.op)) ? fp_data : regular_data;
   assign slice_mask_dst = regular_mask_dst;
   assign slice_vxsat = vop_is_narrow(slice_ctrl.op) ? narrow_vxsat :
-                       vop_is_fp_arith(slice_ctrl.op) ? 1'b0 : regular_vxsat;
+                       (vop_is_fp_arith(slice_ctrl.op) ||
+                        vop_is_fp_convert(slice_ctrl.op) ||
+                        vop_is_fp_estimate(slice_ctrl.op)) ? 1'b0 : regular_vxsat;
   assign slice_fflags = vop_is_narrow(slice_ctrl.op) ? '0 :
-                        vop_is_fp_arith(slice_ctrl.op) ? fp_fflags :
+                        (vop_is_fp_arith(slice_ctrl.op) ||
+                         vop_is_fp_convert(slice_ctrl.op) ||
+                         vop_is_fp_estimate(slice_ctrl.op)) ? fp_fflags :
                         regular_fflags;
 
   always_comb begin
@@ -261,7 +280,35 @@ module vcore_alu_pipe #(
     .source_i(reduction_src_q), .mask_i(mask_q),
     .element_index_i(reduction_index_q),
     .accumulator_i(reduction_acc_q), .ctrl_i(ctrl_q),
-    .accumulator_o(reduction_next), .invalid_o(reduction_invalid)
+    .accumulator_o(reduction_step_next), .invalid_o(reduction_invalid),
+    .fp_element_o(reduction_element), .active_o(reduction_active)
+  );
+  assign reduction_next = (vop_is_fp_sum_reduce(ctrl_q.op) &&
+                           reduction_active) ?
+                          {32'b0,fp_reduce_result} : reduction_step_next;
+  assign reduction_flags = vop_is_fp_sum_reduce(ctrl_q.op) ?
+                           (reduction_active ? fp_reduce_flags : 5'b0) :
+                           {reduction_invalid,4'b0};
+
+  assign fp_div_global_index = ctrl_q.element_base + 17'(fp_div_index_q);
+  assign fp_div_active = (fp_div_global_index >= ctrl_q.vstart) &&
+                         (fp_div_global_index < ctrl_q.vl) &&
+                         (ctrl_q.vm || mask_q[fp_div_global_index[6:0]]);
+  assign fp_div_a = (ctrl_q.op == VOP_FRDIV) ?
+                    fp_div_src1_q[31:0] :
+                    fp_div_src2_q[int'(fp_div_index_q)*32 +: 32];
+  assign fp_div_b = (ctrl_q.op == VOP_FSQRT) ? 32'h3f80_0000 :
+                    (ctrl_q.op == VOP_FRDIV) ?
+                    fp_div_src2_q[int'(fp_div_index_q)*32 +: 32] :
+                    fp_div_src1_q[int'(fp_div_index_q)*32 +: 32];
+  assign fp_div_in_valid = (phase_q == PHASE_FP_DIV_PREP) &&
+                           (fp_div_index_q < 3'd4) && fp_div_active;
+  vcore_alu_fp32_divsqrt u_fp_divsqrt (
+    .clk_i(clk_i), .rst_ni(rst_ni && !flush_i),
+    .in_valid_i(fp_div_in_valid), .in_ready_o(fp_div_in_ready),
+    .sqrt_i(ctrl_q.op == VOP_FSQRT), .a_i(fp_div_a), .b_i(fp_div_b),
+    .frm_i(ctrl_q.frm), .out_valid_o(fp_div_out_valid),
+    .result_o(fp_div_value), .fflags_o(fp_div_flags)
   );
 
   // Radix-2 restoring division: one quotient bit and one 65-bit subtract
@@ -363,7 +410,7 @@ module vcore_alu_pipe #(
       low_fflags_q <= '0;
       illegal_q <= 1'b0;
       reduction_acc_q <= '0;
-      reduction_invalid_q <= 1'b0;
+      reduction_flags_q <= '0;
       reduction_src_q <= '0;
       reduction_index_q <= '0;
       mask_chunk_q <= '0;
@@ -379,6 +426,11 @@ module vcore_alu_pipe #(
       div_remainder_q <= '0;
       div_neg_quotient_q <= 1'b0;
       div_neg_remainder_q <= 1'b0;
+      fp_div_src1_q <= '0;
+      fp_div_src2_q <= '0;
+      fp_div_result_q <= '0;
+      fp_div_flags_q <= '0;
+      fp_div_index_q <= '0;
     end else if (flush_i) begin
       phase_q <= PHASE_LOW;
       rsp_valid_q <= 1'b0;
@@ -405,12 +457,16 @@ module vcore_alu_pipe #(
         illegal_q <= !vop_supported(ctrl_i.op) || !vsew_supported(ctrl_i.sew) ||
                      ((vop_is_widen_integer(ctrl_i.op) ||
                        vop_is_narrow(ctrl_i.op)) && ctrl_i.sew > VSEW_32) ||
-                     (vop_is_fp_arith(ctrl_i.op) &&
+                     ((vop_is_fp_arith(ctrl_i.op) ||
+                       vop_is_fp_convert(ctrl_i.op) ||
+                       vop_is_fp_sum_reduce(ctrl_i.op) ||
+                       vop_is_fp_divsqrt(ctrl_i.op) ||
+                       vop_is_fp_estimate(ctrl_i.op)) &&
                       (ctrl_i.sew != VSEW_32 || ctrl_i.frm > 3'b100));
         if (vop_is_reduction(ctrl_i.op)) begin
           reduction_src_q <= src2_i[VLEN-1:0];
           reduction_index_q <= '0;
-          reduction_invalid_q <= 1'b0;
+          reduction_flags_q <= '0;
           if (ctrl_i.first_beat)
             reduction_acc_q <= reduction_seed(src1_i,ctrl_i);
           phase_q <= PHASE_REDUCE;
@@ -425,6 +481,13 @@ module vcore_alu_pipe #(
           div_result_q <= dst_old_i;
           div_index_q <= '0;
           phase_q <= PHASE_DIV_PREP;
+        end else if (vop_is_fp_divsqrt(ctrl_i.op)) begin
+          fp_div_src1_q <= src1_i;
+          fp_div_src2_q <= src2_i[VLEN-1:0];
+          fp_div_result_q <= dst_old_i;
+          fp_div_flags_q <= '0;
+          fp_div_index_q <= '0;
+          phase_q <= PHASE_FP_DIV_PREP;
         end else phase_q <= PHASE_HIGH;
       end
 
@@ -449,7 +512,7 @@ module vcore_alu_pipe #(
       if (phase_q == PHASE_REDUCE) begin
         if (reduction_index_q + 5'd1 < reduction_elements) begin
           reduction_acc_q <= reduction_next;
-          reduction_invalid_q <= reduction_invalid_q | reduction_invalid;
+          reduction_flags_q <= reduction_flags_q | reduction_flags;
           reduction_index_q <= reduction_index_q + 5'd1;
         end else if (rsp_slot_ready) begin
           reduction_acc_q <= reduction_next;
@@ -459,7 +522,7 @@ module vcore_alu_pipe #(
           rsp_meta_q.vd_addr <= ctrl_q.vd_addr;
           rsp_meta_q.last_beat <= ctrl_q.last_beat;
           rsp_meta_q.vxsat <= 1'b0;
-          rsp_meta_q.fflags <= {reduction_invalid_q | reduction_invalid,4'b0};
+          rsp_meta_q.fflags <= reduction_flags_q | reduction_flags;
           rsp_meta_q.write_enable <= ctrl_q.last_beat && (ctrl_q.vl != 0);
           rsp_meta_q.scalar_valid <= 1'b0;
           rsp_meta_q.scalar_rd <= '0;
@@ -571,6 +634,39 @@ module vcore_alu_pipe #(
           div_index_q <= div_index_q + 5'd1;
           phase_q <= PHASE_DIV_PREP;
         end else div_count_q <= div_count_q - 7'd1;
+      end
+
+      if (phase_q == PHASE_FP_DIV_PREP) begin
+        if (fp_div_index_q == 3'd4) begin
+          if (rsp_slot_ready) begin
+            rsp_valid_q <= 1'b1;
+            rsp_data_q <= fp_div_result_q;
+            rsp_meta_q.tag <= ctrl_q.tag;
+            rsp_meta_q.vd_addr <= ctrl_q.vd_addr;
+            rsp_meta_q.last_beat <= ctrl_q.last_beat;
+            rsp_meta_q.vxsat <= 1'b0;
+            rsp_meta_q.fflags <= fp_div_flags_q;
+            rsp_meta_q.write_enable <= 1'b1;
+            rsp_meta_q.scalar_valid <= 1'b0;
+            rsp_meta_q.scalar_rd <= '0;
+            rsp_meta_q.scalar_data <= '0;
+            rsp_meta_q.illegal_op <= 1'b0;
+            phase_q <= PHASE_LOW;
+          end
+        end else if (!fp_div_active) begin
+          if (ctrl_q.vstart < ctrl_q.vl &&
+              ((fp_div_global_index >= ctrl_q.vl && ctrl_q.vta) ||
+               (fp_div_global_index < ctrl_q.vl &&
+                fp_div_global_index >= ctrl_q.vstart && ctrl_q.vma)))
+            fp_div_result_q[int'(fp_div_index_q)*32 +: 32] <= '1;
+          fp_div_index_q <= fp_div_index_q + 3'd1;
+        end else if (fp_div_in_ready) phase_q <= PHASE_FP_DIV_WAIT;
+      end
+      if (phase_q == PHASE_FP_DIV_WAIT && fp_div_out_valid) begin
+        fp_div_result_q[int'(fp_div_index_q)*32 +: 32] <= fp_div_value;
+        fp_div_flags_q <= fp_div_flags_q | fp_div_flags;
+        fp_div_index_q <= fp_div_index_q + 3'd1;
+        phase_q <= PHASE_FP_DIV_PREP;
       end
     end
   end

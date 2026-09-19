@@ -133,6 +133,19 @@ package vcore_alu_pkg;
     VOP_FNMACC   = 8'd118,
     VOP_FMSAC    = 8'd119,
     VOP_FNMSAC   = 8'd120,
+    VOP_FCVT_XU_F = 8'd121,
+    VOP_FCVT_X_F  = 8'd122,
+    VOP_FCVT_F_XU = 8'd123,
+    VOP_FCVT_F_X  = 8'd124,
+    VOP_FCVT_RTZ_XU_F = 8'd125,
+    VOP_FCVT_RTZ_X_F  = 8'd126,
+    VOP_FREDUSUM = 8'd127,
+    VOP_FREDOSUM = 8'd128,
+    VOP_FDIV = 8'd129,
+    VOP_FRDIV = 8'd130,
+    VOP_FSQRT = 8'd131,
+    VOP_FREC7 = 8'd132,
+    VOP_FRSQRT7 = 8'd133,
     VOP_INVALID  = 8'hff
   } vop_e;
 
@@ -268,7 +281,7 @@ package vcore_alu_pkg;
       VOP_REDSUM, VOP_REDAND, VOP_REDOR, VOP_REDXOR,
       VOP_REDMINU, VOP_REDMIN, VOP_REDMAXU, VOP_REDMAX,
       VOP_WREDSUMU, VOP_WREDSUM: return 1'b1;
-      VOP_FREDMIN, VOP_FREDMAX: return 1'b1;
+      VOP_FREDMIN, VOP_FREDMAX, VOP_FREDUSUM, VOP_FREDOSUM: return 1'b1;
       default: return 1'b0;
     endcase
   endfunction
@@ -344,6 +357,26 @@ package vcore_alu_pkg;
     endcase
   endfunction
 
+  function automatic logic vop_is_fp_convert(input logic [7:0] op);
+    case (op)
+      VOP_FCVT_XU_F, VOP_FCVT_X_F, VOP_FCVT_F_XU, VOP_FCVT_F_X,
+      VOP_FCVT_RTZ_XU_F, VOP_FCVT_RTZ_X_F: return 1'b1;
+      default: return 1'b0;
+    endcase
+  endfunction
+
+  function automatic logic vop_is_fp_sum_reduce(input logic [7:0] op);
+    return (op == VOP_FREDUSUM) || (op == VOP_FREDOSUM);
+  endfunction
+
+  function automatic logic vop_is_fp_divsqrt(input logic [7:0] op);
+    return (op == VOP_FDIV) || (op == VOP_FRDIV) || (op == VOP_FSQRT);
+  endfunction
+
+  function automatic logic vop_is_fp_estimate(input logic [7:0] op);
+    return (op == VOP_FREC7) || (op == VOP_FRSQRT7);
+  endfunction
+
   function automatic logic vop_widen_mul_vs2_signed(input logic [7:0] op);
     return (op == VOP_WMULSU) || (op == VOP_WMUL) ||
            (op == VOP_WMACC) || (op == VOP_WMACCUS);
@@ -402,10 +435,13 @@ package vcore_alu_pkg;
       VOP_WMULU, VOP_WMULSU, VOP_WMUL,
       VOP_WMACCU, VOP_WMACC, VOP_WMACCUS, VOP_WMACCSU,
       VOP_NSRL, VOP_NSRA, VOP_NCLIPU, VOP_NCLIP,
-      VOP_FREDMIN, VOP_FREDMAX,
+      VOP_FREDMIN, VOP_FREDMAX, VOP_FREDUSUM, VOP_FREDOSUM,
+      VOP_FDIV, VOP_FRDIV, VOP_FSQRT, VOP_FREC7, VOP_FRSQRT7,
       VOP_FADD, VOP_FSUB, VOP_FRSUB, VOP_FMUL,
       VOP_FMADD, VOP_FNMADD, VOP_FMSUB, VOP_FNMSUB,
-      VOP_FMACC, VOP_FNMACC, VOP_FMSAC, VOP_FNMSAC:
+      VOP_FMACC, VOP_FNMACC, VOP_FMSAC, VOP_FNMSAC,
+      VOP_FCVT_XU_F, VOP_FCVT_X_F, VOP_FCVT_F_XU, VOP_FCVT_F_X,
+      VOP_FCVT_RTZ_XU_F, VOP_FCVT_RTZ_X_F:
         return 1'b1;
       default: return 1'b0;
     endcase

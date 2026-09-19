@@ -78,6 +78,7 @@ module tb_vcore_alu_top;
         if (commit_data.last_beat) last_seen <= 1;
       end
     end
+
   end
 
   task automatic send_command;
@@ -1048,6 +1049,208 @@ module tb_vcore_alu_top;
     await_commits(210);
     if (mem[20] !== {4{32'h8000_0000}} || last_fflags != 0)
       $fatal(1,"FP multiply signed zero mismatch %h flags=%h",mem[20],last_fflags);
+
+    // Six FP32/int32 conversion encodings use the same two conversion lanes.
+    begin : fp_convert_sweep
+      int wanted;
+      logic [31:0] source_bits, expected_bits;
+      logic [4:0] expected_flags;
+      int vs1_code;
+      wanted = 210;
+      cmd.frm = 3'b000;
+      cmd.mask_snapshot = '1;
+      for (int mode=0; mode<6; mode++) begin
+        case (mode)
+          0: begin vs1_code=0; source_bits=32'h4020_0000;
+                   expected_bits=32'd2; expected_flags=5'h01; end
+          1: begin vs1_code=1; source_bits=32'hc020_0000;
+                   expected_bits=32'hffff_fffe; expected_flags=5'h01; end
+          2: begin vs1_code=2; source_bits=32'hffff_ffff;
+                   expected_bits=32'h4f80_0000; expected_flags=5'h01; end
+          3: begin vs1_code=3; source_bits=32'h8000_0000;
+                   expected_bits=32'hcf00_0000; expected_flags=5'h00; end
+          4: begin vs1_code=6; source_bits=32'h4039_999a;
+                   expected_bits=32'd2; expected_flags=5'h01; end
+          default: begin vs1_code=7; source_bits=32'hc039_999a;
+                   expected_bits=32'hffff_fffe; expected_flags=5'h01; end
+        endcase
+        mem[8] = {4{source_bits}};
+        mem[20] = '0;
+        cmd.inst = {6'h12,1'b1,5'd8,5'(vs1_code),3'b001,5'd20,7'h57};
+        cmd.tag = 16'(32'h105+mode);
+        send_command();
+        wanted++;
+        await_commits(wanted);
+        if (mem[20] !== {4{expected_bits}} || last_fflags != expected_flags)
+          $fatal(1,"FP convert mode=%0d got=%h flags=%h expected=%h/%h",
+                 mode,mem[20],last_fflags,expected_bits,expected_flags);
+      end
+      mem[8] = {4{32'h7fc0_0000}}; // NaN -> maximum signed int, NV
+      cmd.inst = {6'h12,1'b1,5'd8,5'd1,3'b001,5'd20,7'h57};
+      cmd.tag = 16'h10b;
+      send_command();
+      await_commits(217);
+      if (mem[20] !== {4{32'h7fff_ffff}} || last_fflags != 5'h10)
+        $fatal(1,"FP convert NaN saturation mismatch %h/%h",mem[20],last_fflags);
+      mem[8] = {4{32'hbf80_0000}}; // -1 -> unsigned zero, NV
+      cmd.inst = {6'h12,1'b1,5'd8,5'd0,3'b001,5'd20,7'h57};
+      cmd.tag = 16'h10c;
+      send_command();
+      await_commits(218);
+      if (mem[20] !== '0 || last_fflags != 5'h10)
+        $fatal(1,"FP convert negative unsigned mismatch %h/%h",mem[20],last_fflags);
+    end
+
+    // Ordered accumulation is also a legal implementation of unordered sum.
+    // Both forms keep the seed across LMUL=2 VRF beats.
+    cmd.sew = VSEW_32;
+    cmd.vlmul = 3'b001;
+    cmd.vl = 8;
+    cmd.vstart = 0;
+    cmd.mask_snapshot = '1;
+    cmd.frm = 3'b000;
+    mem[4] = {4{32'h3f80_0000}}; // seed 1
+    mem[8] = {4{32'h3f80_0000}}; // four 1s
+    mem[9] = {4{32'h4000_0000}}; // four 2s
+    for (int mode=0; mode<2; mode++) begin
+      mem[20] = '0;
+      cmd.inst = {6'(mode==0 ? 1 : 3),1'b1,5'd8,5'd4,3'b001,5'd20,7'h57};
+      cmd.tag = 16'(32'h10d+mode);
+      send_command();
+      await_commits(220+2*mode);
+      if (mem[20][31:0] !== 32'h4150_0000 || last_fflags != 0)
+        $fatal(1,"FP sum reduction mode=%0d data=%h flags=%h",
+               mode,mem[20],last_fflags);
+    end
+
+    // No active source elements copies even a signaling-NaN seed verbatim.
+    cmd.vlmul = 3'b000;
+    cmd.vl = 4;
+    cmd.mask_snapshot = '0;
+    cmd.inst = {6'h03,1'b0,5'd8,5'd4,3'b001,5'd20,7'h57};
+    mem[4][31:0] = 32'h7f80_0001;
+    mem[20] = '0;
+    cmd.tag = 16'h10f;
+    send_command();
+    await_commits(223);
+    if (mem[20][31:0] !== 32'h7f80_0001 || last_fflags != 0)
+      $fatal(1,"inactive FP sum changed seed/flags %h/%h",mem[20],last_fflags);
+
+    // Iterative FP32 divide/reverse-divide/sqrt share one HardFloat engine.
+    cmd.mask_snapshot = '1;
+    cmd.vl = 4;
+    mem[8] = {4{32'h4100_0000}}; // 8.0
+    mem[4] = {4{32'h4000_0000}}; // 2.0
+    cmd.inst = {6'h20,1'b1,5'd8,5'd4,3'b001,5'd20,7'h57};
+    cmd.tag = 16'h110;
+    send_command();
+    await_commits(224);
+    if (mem[20] !== {4{32'h4080_0000}} || last_fflags != 0)
+      $fatal(1,"FP divide vv mismatch %h/%h",mem[20],last_fflags);
+
+    cmd.scalar = 32'h4080_0000; // 4.0
+    cmd.inst = {6'h20,1'b1,5'd8,5'd3,3'b101,5'd20,7'h57};
+    cmd.tag = 16'h111;
+    send_command();
+    await_commits(225);
+    if (mem[20] !== {4{32'h4000_0000}} || last_fflags != 0)
+      $fatal(1,"FP divide vf mismatch %h/%h",mem[20],last_fflags);
+
+    cmd.scalar = 32'h4180_0000; // 16.0 / 8.0
+    cmd.inst = {6'h21,1'b1,5'd8,5'd3,3'b101,5'd20,7'h57};
+    cmd.tag = 16'h112;
+    send_command();
+    await_commits(226);
+    if (mem[20] !== {4{32'h4000_0000}} || last_fflags != 0)
+      $fatal(1,"FP reverse divide mismatch %h/%h",mem[20],last_fflags);
+
+    mem[8] = {4{32'h4110_0000}}; // sqrt(9)=3
+    cmd.inst = {6'h13,1'b1,5'd8,5'd0,3'b001,5'd20,7'h57};
+    cmd.tag = 16'h113;
+    send_command();
+    await_commits(227);
+    if (mem[20] !== {4{32'h4040_0000}} || last_fflags != 0)
+      $fatal(1,"FP sqrt mismatch %h/%h",mem[20],last_fflags);
+
+    mem[8] = {4{32'h3f80_0000}};
+    cmd.scalar = 32'h0000_0000;
+    cmd.inst = {6'h20,1'b1,5'd8,5'd3,3'b101,5'd20,7'h57};
+    cmd.tag = 16'h114;
+    send_command();
+    await_commits(228);
+    if (mem[20] !== {4{32'h7f80_0000}} || last_fflags != 5'h08)
+      $fatal(1,"FP divide-by-zero mismatch %h/%h",mem[20],last_fflags);
+
+    mem[8] = {4{32'hbf80_0000}};
+    cmd.inst = {6'h13,1'b1,5'd8,5'd0,3'b001,5'd20,7'h57};
+    cmd.tag = 16'h115;
+    send_command();
+    await_commits(229);
+    if (mem[20] !== {4{32'h7fc0_0000}} || last_fflags != 5'h10)
+      $fatal(1,"FP sqrt negative mismatch %h/%h",mem[20],last_fflags);
+
+    mem[20] = {4{32'h3f80_0000}};
+    cmd.inst = {6'h20,1'b0,5'd8,5'd3,3'b101,5'd20,7'h57};
+    cmd.mask_snapshot = '0;
+    cmd.tag = 16'h116;
+    send_command();
+    await_commits(230);
+    if (mem[20] !== {4{32'h3f80_0000}} || last_fflags != 0)
+      $fatal(1,"masked FP divide changed data/flags %h/%h",mem[20],last_fflags);
+
+    // Exact RVV 1.0 reciprocal-estimate lookup examples and special cases.
+    mem[8] = {32'h7f80_0000,32'h7f76_5432,32'h0071_8abc,32'h3f80_0000};
+    cmd.mask_snapshot = '1;
+    cmd.inst = {6'h13,1'b1,5'd8,5'd5,3'b001,5'd20,7'h57};
+    cmd.tag = 16'h117;
+    send_command();
+    await_commits(231);
+    if (mem[20] !== {32'h0000_0000,32'h0021_4000,
+                     32'h7e90_0000,32'h3f7f_0000} || last_fflags != 0)
+      $fatal(1,"FP rec7 lookup mismatch %h/%h",mem[20],last_fflags);
+
+    cmd.inst = {6'h13,1'b1,5'd8,5'd4,3'b001,5'd20,7'h57};
+    cmd.tag = 16'h118;
+    send_command();
+    await_commits(232);
+    if (mem[20] !== {32'h0000_0000,32'h1f82_0000,
+                     32'h5f08_0000,32'h3f7f_0000} || last_fflags != 0)
+      $fatal(1,"FP rsqrt7 lookup mismatch %h/%h",mem[20],last_fflags);
+
+    mem[8] = {32'hbf80_0000,32'h7f80_0001,32'h8000_0000,32'h0000_0000};
+    cmd.tag = 16'h119;
+    send_command();
+    await_commits(233);
+    if (mem[20] !== {32'h7fc0_0000,32'h7fc0_0000,
+                     32'hff80_0000,32'h7f80_0000} || last_fflags != 5'h18)
+      $fatal(1,"FP rsqrt7 special mismatch %h/%h",mem[20],last_fflags);
+
+    mem[8] = {4{32'h0000_0001}}; // reciprocal overflows
+    cmd.inst = {6'h13,1'b1,5'd8,5'd5,3'b001,5'd20,7'h57};
+    cmd.frm = 3'b001; // RTZ selects max finite
+    cmd.tag = 16'h11a;
+    send_command();
+    await_commits(234);
+    if (mem[20] !== {4{32'h7f7f_ffff}} || last_fflags != 5'h05)
+      $fatal(1,"FP rec7 overflow/round mismatch %h/%h",mem[20],last_fflags);
+
+    // The iterative unit restarts cleanly for the next LMUL destination beat.
+    mem[8] = {4{32'h4100_0000}}; // 8 / 4 = 2
+    mem[9] = {4{32'h4140_0000}}; // 12 / 4 = 3
+    mem[20] = '0;
+    mem[21] = '0;
+    cmd.scalar = 32'h4080_0000;
+    cmd.inst = {6'h20,1'b1,5'd8,5'd3,3'b101,5'd20,7'h57};
+    cmd.vlmul = 3'b001;
+    cmd.vl = 8;
+    cmd.frm = 3'b000;
+    cmd.tag = 16'h11b;
+    send_command();
+    await_commits(236);
+    if (mem[20] !== {4{32'h4000_0000}} ||
+        mem[21] !== {4{32'h4040_0000}} || last_fflags != 0)
+      $fatal(1,"FP divide LMUL=2 mismatch %h %h/%h",
+             mem[20],mem[21],last_fflags);
 
     $display("tb_vcore_alu_top PASS");
     $finish;

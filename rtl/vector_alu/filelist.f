@@ -1,4 +1,5 @@
 rtl/vector_alu/vcore_alu_pkg.sv
++incdir+rtl/vector_alu
 +incdir+rtl/vector_alu/third_party/hardfloat
 rtl/vector_alu/third_party/hardfloat/HardFloat_primitives.v
 rtl/vector_alu/third_party/hardfloat/HardFloat_rawFN.v
@@ -7,7 +8,13 @@ rtl/vector_alu/third_party/hardfloat/isSigNaNRecFN.v
 rtl/vector_alu/third_party/hardfloat/fNToRecFN.v
 rtl/vector_alu/third_party/hardfloat/recFNToFN.v
 rtl/vector_alu/third_party/hardfloat/mulAddRecFN.v
+rtl/vector_alu/third_party/hardfloat/iNToRecFN.v
+rtl/vector_alu/third_party/hardfloat/recFNToIN.v
+rtl/vector_alu/third_party/hardfloat/divSqrtRecFN_small.v
 rtl/vector_alu/vcore_alu_fp32_fma.sv
+rtl/vector_alu/vcore_alu_fp32_convert.sv
+rtl/vector_alu/vcore_alu_fp32_divsqrt.sv
+rtl/vector_alu/vcore_alu_fp32_estimate.sv
 rtl/vector_alu/vcore_alu_fp32_slice.sv
 rtl/vector_alu/vcore_alu_slice.sv
 rtl/vector_alu/vcore_alu_narrow_slice.sv

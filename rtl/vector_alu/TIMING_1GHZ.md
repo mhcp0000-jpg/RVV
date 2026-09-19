@@ -11,6 +11,7 @@
 | 일반 정수 | 128비트 beat의 하위/상위 64비트를 각각 계산 | 2 compute 클록 + VRF/WB | SEW64의 64비트 곱셈, 가변 shift/rounding, mask 선택 mux |
 | 정수 reduction | 한 요소를 64비트 누산기에 적용 | source 요소 수에 비례 | 동적 요소 선택 + 64비트 add/compare |
 | FP32 min/max reduction | 한 FP32 요소를 seed/누산 값과 비교 | source 요소 수에 비례 | 동적 선택 + NaN/zero 판정 + 비교 |
+| FP32 sum reduction | 공유 FMA 경로에서 한 FP32 요소를 순서대로 누산 | 활성 source 요소 수에 비례 | 누산 feedback의 recode·가산·정규화·반올림 조합 경로 |
 | mask reduction | 32비트 mask를 scan/popcount | 4 compute 클록 | 32비트 활성화, popcount, first-bit 선택 |
 | 정수 divide/remainder | radix-2로 몫 1비트 | 활성 요소당 SEW+준비 클록 | 65비트 compare/subtract + mux |
 | 정수 확장 `vzext/vsext` | source sub-register 선택 후 64비트씩 확장 | 2 compute 클록 + VRF/WB | 입력의 128비트 정렬 mux와 lane sign-extension mux |
@@ -18,6 +19,9 @@
 | widening multiply/MAC | narrow source 두 개를 확장해 공통 곱셈 경로에서 계산 | 2 compute 클록/beat + VRF/WB | source 정렬·확장 mux, 64비트 곱셈, 누산 add |
 | narrowing shift/clip | wide source 128비트를 한 클록에 좁은 destination 64비트로 계산 | 2 compute 클록/beat + VRF/WB | wide 가변 shift, `vxrm` 반올림, 포화 compare/mux |
 | FP32 add/sub/mul/FMA | 공유 fused multiply-add 경로에서 FP32 두 lane/클록 | 2 compute 클록/beat + VRF/WB | 입력 recode, 가수 곱셈·가산·정규화·최종 1회 반올림과 fflags가 한 compute 클록의 조합 경로. 1ns 미검증 |
+| FP32/int32 convert | 방향별 변환 경로에서 두 lane/클록 | 2 compute 클록/beat + VRF/WB | leading-zero/정렬·반올림·포화 선택의 조합 경로. 1ns 미검증 |
+| FP32 `vfrec7/vfrsqrt7` | 정규화와 128-entry LUT, 두 lane/클록 | 2 compute 클록/beat + VRF/WB | subnormal leading-zero 정규화와 LUT/mux. 1ns 미검증 |
+| FP32 divide/sqrt | 한 iterative HardFloat 엔진에 활성 요소를 순차 발행 | 요소별 가변 지연 + VRF/WB | 반복 단계의 significand subtract/shift와 최종 반올림. 처리율은 두-lane 일반 경로보다 낮음 |
 
 연산기의 **2 compute 클록**과 명령의 전체 지연은 다릅니다. 1R1W VRF에서
 `.vv`는 source 두 개와 old `vd`를 순차로 읽습니다. LMUL>1일 때 beat도
@@ -52,6 +56,12 @@ WB 후 다음 beat로 넘어가므로, 명령 전체가 2클록 안에 끝나지
 8. narrowing clip은 64비트 가변 shift, 반올림, 포화 비교가 한 compute
    클록에 이어집니다. 1ns를 넘으면 이 경로를 분할하고 compute 지연을
    재정의해야 합니다. 1R VRF의 추가 source read도 전체 명령 지연에 포함합니다.
+9. FP32 변환과 estimate는 일반 두-lane 경로에 들어갑니다. 특히 subnormal
+   normalize의 leading-zero/shift가 1ns를 넘는지 확인하고, 실패하면 입력
+   정규화와 결과 선택 사이에 클록 경계를 추가합니다.
+10. FP32 divide/sqrt는 반복형이라 전체 지연은 2클록 대상이 아닙니다. 반복
+    엔진 내부의 한 단계가 1ns를 만족하는지 별도 STA하고, LMUL 명령의 낮은
+    처리율이 시스템 요구를 만족하는지도 성능 모델로 확인합니다.
 
 ## 사인오프에 필요한 입력과 산출물
 

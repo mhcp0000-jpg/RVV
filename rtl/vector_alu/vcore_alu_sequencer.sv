@@ -71,6 +71,9 @@ module vcore_alu_sequencer #(
     uop_o.read_vs1 = (decoded_q.form == VSRC_VV) &&
                      !vop_is_extension(decoded_q.ctrl.op) &&
                      (decoded_q.ctrl.op != VOP_FCLASS) &&
+                     (decoded_q.ctrl.op != VOP_FSQRT) &&
+                     !vop_is_fp_estimate(decoded_q.ctrl.op) &&
+                     !vop_is_fp_convert(decoded_q.ctrl.op) &&
                      !vop_is_scalar_mask_reduce(decoded_q.ctrl.op) &&
                      (!vop_is_reduction(decoded_q.ctrl.op) || beat_index_q == 0) &&
                      (decoded_q.ctrl.op != VOP_INVALID);

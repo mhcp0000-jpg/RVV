@@ -191,7 +191,9 @@ module vcore_alu_decode #(
     end else if (opf) begin
       case (funct6)
         6'h00: decoded_o.ctrl.op = VOP_FADD;
+        6'h01: decoded_o.ctrl.op = VOP_FREDUSUM;
         6'h02: decoded_o.ctrl.op = VOP_FSUB;
+        6'h03: decoded_o.ctrl.op = VOP_FREDOSUM;
         6'h27: begin
           decoded_o.ctrl.op = VOP_FRSUB;
           operation_valid &= (funct3 == 3'b101);
@@ -203,10 +205,27 @@ module vcore_alu_decode #(
         6'h08: decoded_o.ctrl.op = VOP_FSGNJ;
         6'h09: decoded_o.ctrl.op = VOP_FSGNJN;
         6'h0a: decoded_o.ctrl.op = VOP_FSGNJX;
+        6'h12: begin
+          operation_valid &= (funct3 == 3'b001);
+          case (cmd_i.inst[19:15])
+            5'h00: decoded_o.ctrl.op = VOP_FCVT_XU_F;
+            5'h01: decoded_o.ctrl.op = VOP_FCVT_X_F;
+            5'h02: decoded_o.ctrl.op = VOP_FCVT_F_XU;
+            5'h03: decoded_o.ctrl.op = VOP_FCVT_F_X;
+            5'h06: decoded_o.ctrl.op = VOP_FCVT_RTZ_XU_F;
+            5'h07: decoded_o.ctrl.op = VOP_FCVT_RTZ_X_F;
+            default: operation_valid = 1'b0;
+          endcase
+        end
         6'h13: begin
-          decoded_o.ctrl.op = VOP_FCLASS;
-          operation_valid &= (funct3 == 3'b001) &&
-                             (cmd_i.inst[19:15] == 5'h10);
+          operation_valid &= (funct3 == 3'b001);
+          case (cmd_i.inst[19:15])
+            5'h00: decoded_o.ctrl.op = VOP_FSQRT;
+            5'h04: decoded_o.ctrl.op = VOP_FRSQRT7;
+            5'h05: decoded_o.ctrl.op = VOP_FREC7;
+            5'h10: decoded_o.ctrl.op = VOP_FCLASS;
+            default: operation_valid = 1'b0;
+          endcase
         end
         6'h18: decoded_o.ctrl.op = VOP_FEQ;
         6'h19: decoded_o.ctrl.op = VOP_FLE;
@@ -217,6 +236,11 @@ module vcore_alu_decode #(
         6'h1f: begin decoded_o.ctrl.op = VOP_FGE;
           operation_valid &= (funct3 == 3'b101); end
         6'h24: decoded_o.ctrl.op = VOP_FMUL;
+        6'h20: decoded_o.ctrl.op = VOP_FDIV;
+        6'h21: begin
+          decoded_o.ctrl.op = VOP_FRDIV;
+          operation_valid &= (funct3 == 3'b101);
+        end
         6'h28: decoded_o.ctrl.op = VOP_FMADD;
         6'h29: decoded_o.ctrl.op = VOP_FNMADD;
         6'h2a: decoded_o.ctrl.op = VOP_FMSUB;
