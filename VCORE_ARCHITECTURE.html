@@ -256,7 +256,7 @@
         <li>클러스터 <b>3 / 4</b> (store 미구현)</li>
         <li>ALU 인코딩 <b>237 / 280</b></li>
         <li>Perm 인코딩 <b>34 / 34</b></li>
-        <li>Load 인코딩 <b>5 / 177</b></li>
+        <li>Load 인코딩 <b>177 / 177</b></li>
       </ul>
     </header>
     <section id="s1">
@@ -326,9 +326,9 @@
 
               <rect x="464" y="196" width="196" height="116" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
               <text x="562" y="220" text-anchor="middle" font-size="12" fill="var(--accent)">vcore_vld_top</text>
-              <text x="562" y="240" text-anchor="middle" font-size="10" opacity=".8">vle8/16/32/64.v &middot; vlm.v</text>
-              <text x="562" y="255" text-anchor="middle" font-size="10" opacity=".8">다중 미결 메모리 요청</text>
-              <text x="562" y="276" text-anchor="middle" font-size="10.5">5 / 177 인코딩</text>
+              <text x="562" y="240" text-anchor="middle" font-size="10" opacity=".8">unit/strided/indexed/segment</text>
+              <text x="562" y="255" text-anchor="middle" font-size="10" opacity=".8">whole-reg &middot; fof &middot; 다중 미결</text>
+              <text x="562" y="276" text-anchor="middle" font-size="10.5">177 / 177 인코딩</text>
               <text x="562" y="297" text-anchor="middle" font-size="9.5" opacity=".7">VRF 읽기 0~1회/beat</text>
 
               <rect x="676" y="196" width="196" height="116" rx="3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="5 4" opacity=".55"/>
@@ -392,8 +392,8 @@
             <tr>
               <td><b>Load 클러스터</b></td>
               <td class="mono">rtl/vector_load/</td>
-              <td>공식 인코딩 177개 중 <b>5개</b> &mdash; unit-stride <code>vle8/16/32/64.v</code> + <code>vlm.v</code></td>
-              <td>golden ref 2,433 / directed 15 / 인코딩 표 9,990, 전부 통과</td>
+              <td>공식 인코딩 <b>177개 전부</b> &mdash; unit-stride, strided, indexed(unordered/ordered), fault-only-first, whole-register, mask, 그리고 각각의 segment 형식</td>
+              <td>golden ref 3,398 / directed 26 / 인코딩&times;vtype 표 10,332, 전부 통과</td>
               <td><span class="pill done">범위 내 완료</span></td>
             </tr>
             <tr>
@@ -411,12 +411,7 @@
               <td>§8 참조</td><td>&mdash;</td>
               <td><span class="pill todo">미구현</span></td>
             </tr>
-            <tr>
-              <td>strided / indexed / segment / whole-reg / fault-only-first</td>
-              <td>&mdash;</td>
-              <td>메모리 명령 나머지</td><td>&mdash;</td>
-              <td><span class="pill todo">미구현 (현재 illegal 보고)</span></td>
-            </tr>
+
           </tbody>
         </table>
         <caption>각 클러스터의 TB는 자기 힘으로 돌아가는 독립 테스트벤치이며, VRF·메모리·호스트를 모델로 대체합니다. 따라서 위 검증 수치는 클러스터 단위 수치이고, 통합 수준 검증은 TOP이 생긴 다음의 일입니다.</caption>
@@ -852,7 +847,7 @@
     </section>
     <section id="s7">
       <h2><span class="snum">07</span><span>Load 클러스터</span></h2>
-      <p class="lede">Permutation과 같은 골격에 네 번째 단계만 바꿔 넣은 유닛입니다. 요청은 <em>실행 단계에서</em> 외부 메모리로 나가고, 응답을 다 받은 뒤 조립 단계가 돌아갑니다. 최대 <code>MAX_OUTSTANDING</code>개를 동시에 미결로 둡니다.</p>
+      <p class="lede">Permutation과 같은 골격에 네 번째 단계만 바꿔 넣은 유닛입니다. 요청은 <em>실행 단계에서</em> 외부 메모리로 나가고, 응답을 다 받은 뒤 조립 단계가 돕니다. RVV 1.0 벡터 로드 <b>177개 인코딩 전부</b>를 <em>하나의 데이터패스</em>로 처리합니다 &mdash; 형식마다 클러스터를 늘리지 않았습니다.</p>
 
       <h3>7.1 지원 범위</h3>
       <p>LOAD-FP(<code>opcode = 0000111</code>) 인코딩 필드는 다음과 같습니다.</p>
@@ -870,15 +865,17 @@
           <tbody>
             <tr><td class="mono">mop=00, lumop=00000</td><td><span class="pill done">지원</span> <code>vle8/16/32/64.v</code></td><td>EEW는 <code>width</code>에서, EMUL = EEW/SEW &times; LMUL</td></tr>
             <tr><td class="mono">mop=00, lumop=01011</td><td><span class="pill done">지원</span> <code>vlm.v</code></td><td>EEW=8, EMUL=1, <code>evl=ceil(vl/8)</code>, 항상 tail-agnostic</td></tr>
-            <tr><td class="mono">mop=10</td><td><span class="pill todo">illegal</span> strided</td><td>주소 스트라이드 계산이 다름 &mdash; 별도 클러스터/모드</td></tr>
-            <tr><td class="mono">mop=01 / 11</td><td><span class="pill todo">illegal</span> indexed</td><td>인덱스 벡터를 VRF에서 읽어야 함. <code>vloxei</code>는 원소 순서까지 보장해야 함</td></tr>
-            <tr><td class="mono">lumop=01000</td><td><span class="pill todo">illegal</span> whole-register</td><td>vtype 무시, evl이 다름</td></tr>
-            <tr><td class="mono">lumop=10000</td><td><span class="pill todo">illegal</span> fault-only-first</td><td><b>pre-commit fault check 모델과 정면 충돌</b> &mdash; §7.6</td></tr>
-            <tr><td class="mono">nf != 0</td><td><span class="pill todo">illegal</span> segment</td><td>필드 개수만큼 인터리브 &mdash; 주소/목적지 계산이 다름</td></tr>
-            <tr><td class="mono">mew=1</td><td><span class="pill todo">illegal</span></td><td>EEW&gt;64 미지원</td></tr>
+            <tr><td class="mono">mop=10</td><td><span class="pill done">지원</span> <code>vlse*.v</code></td><td>주소 = <code>base + i&times;x[rs2]</code>. 부호 있는 stride, 0도 합법</td></tr>
+            <tr><td class="mono">mop=01</td><td><span class="pill done">지원</span> <code>vluxei*.v</code></td><td>unordered indexed. <b>데이터 EEW는 vtype.vsew</b>, <code>width</code>는 인덱스 폭</td></tr>
+            <tr><td class="mono">mop=11</td><td><span class="pill done">지원</span> <code>vloxei*.v</code></td><td>ordered indexed. 미결 창을 1로 클램프해 원소 순서 보장</td></tr>
+            <tr><td class="mono">lumop=01000</td><td><span class="pill done">지원</span> whole-register</td><td>vtype&middot;vl&middot;v0 전부 무시, <code>evl = NREG&times;VLEN/EEW</code></td></tr>
+            <tr><td class="mono">lumop=10000</td><td><span class="pill done">지원</span> fault-only-first</td><td>원소 0 외의 fault는 trap 대신 <code>vl</code>을 깎고 commit으로 보고</td></tr>
+            <tr><td class="mono">nf != 0</td><td><span class="pill done">지원</span> segment</td><td>목적지가 nf개 필드 그룹. <b>그룹 버퍼는 그대로</b> &mdash; 아래 참조</td></tr>
+            <tr><td class="mono">mew=1</td><td><span class="pill todo">illegal</span></td><td>EEW&gt;64는 RVV에 정의되지 않음</td></tr>
+            <tr><td class="mono">예약 lumop / 예약 whole-reg nf</td><td><span class="pill todo">illegal</span></td><td>예약 인코딩</td></tr>
           </tbody>
         </table>
-        <caption>범위 밖 인코딩을 조용히 무시하지 않고 <code>illegal_op</code>으로 올리는 것이 중요합니다 &mdash; TOP이 다른 곳으로 라우팅하거나 trap을 걸 수 있게 하려는 것이고, 반쯤 맞는 동작을 하는 것보다 안전합니다.</caption>
+        <caption>예약 인코딩을 조용히 무시하지 않고 <code>illegal_op</code>으로 올리는 것이 중요합니다 &mdash; TOP이 trap을 걸 수 있게 하려는 것이고, 반쯤 맞는 동작을 하는 것보다 안전합니다.</caption>
       </div>
 
       <h4>공식 인코딩 체크리스트</h4>
@@ -896,43 +893,41 @@
           <tbody>
             <tr><td>Unit-stride</td><td class="num">4</td><td class="num"><b>4</b></td><td><code>vle8/16/32/64.v</code></td></tr>
             <tr><td>Mask memory</td><td class="num">1</td><td class="num"><b>1</b></td><td><code>vlm.v</code></td></tr>
-            <tr><td>Strided</td><td class="num">4</td><td class="num">0</td><td>mop=10</td></tr>
-            <tr><td>Indexed unordered</td><td class="num">4</td><td class="num">0</td><td>mop=01. EEW=64는 카탈로그에서 RV32 V 제외</td></tr>
-            <tr><td>Indexed ordered</td><td class="num">4</td><td class="num">0</td><td>mop=11. 원소 순서까지 보장해야 함</td></tr>
-            <tr><td>Fault-only-first</td><td class="num">32</td><td class="num">0</td><td>lumop=10000. pre-commit fault check와 충돌 &mdash; §7.6</td></tr>
-            <tr><td>Whole register</td><td class="num">16</td><td class="num">0</td><td>lumop=01000, <code>nf</code>로 1/2/4/8 레지스터</td></tr>
-            <tr><td>Segment unit-stride</td><td class="num">28</td><td class="num">0</td><td><code>nf</code>=1~7</td></tr>
-            <tr><td>Segment strided</td><td class="num">28</td><td class="num">0</td><td></td></tr>
-            <tr><td>Segment indexed unordered</td><td class="num">28</td><td class="num">0</td><td></td></tr>
-            <tr><td>Segment indexed ordered</td><td class="num">28</td><td class="num">0</td><td></td></tr>
-            <tr><td><b>합계</b></td><td class="num"><b>177</b></td><td class="num"><b>5</b></td><td></td></tr>
+            <tr><td>Strided</td><td class="num">4</td><td class="num"><b>4</b></td><td>mop=10</td></tr>
+            <tr><td>Indexed unordered</td><td class="num">4</td><td class="num"><b>4</b></td><td>mop=01. 인덱스 EEW=64는 Zve64x 필요</td></tr>
+            <tr><td>Indexed ordered</td><td class="num">4</td><td class="num"><b>4</b></td><td>mop=11. 미결 1개로 직렬화</td></tr>
+            <tr><td>Fault-only-first</td><td class="num">32</td><td class="num"><b>32</b></td><td>lumop=10000. 에러 응답으로 vl을 깎음</td></tr>
+            <tr><td>Whole register</td><td class="num">16</td><td class="num"><b>16</b></td><td>lumop=01000, <code>nf</code>로 1/2/4/8 레지스터</td></tr>
+            <tr><td>Segment unit-stride</td><td class="num">28</td><td class="num"><b>28</b></td><td><code>nf</code>=1~7</td></tr>
+            <tr><td>Segment strided</td><td class="num">28</td><td class="num"><b>28</b></td><td></td></tr>
+            <tr><td>Segment indexed unordered</td><td class="num">28</td><td class="num"><b>28</b></td><td></td></tr>
+            <tr><td>Segment indexed ordered</td><td class="num">28</td><td class="num"><b>28</b></td><td></td></tr>
+            <tr><td><b>합계</b></td><td class="num"><b>177</b></td><td class="num"><b>177</b></td><td></td></tr>
           </tbody>
         </table>
         <caption>공식 <code>rv_v</code> 파일은 <code>nf</code>를 unit-stride / strided / indexed / fault-only-first 행에서 가변으로 두므로, segment 변형이 그 행을 공유합니다. 위 표는 RVV 1.0이 이름을 주는 단위로 전개한 것이고, 그래서 카탈로그와 같은 177이 됩니다.</caption>
       </div>
 
-      <p>검사 그룹 4개, 총 <b>9,990 probe</b>:</p>
+      <p>이제 &ldquo;범위 안인가&rdquo;가 아니라 <b>&ldquo;아키텍처적으로 합법인 (인코딩, vtype) 쌍만 정확히 받아들이는가&rdquo;</b>가 질문입니다. 검사 그룹 2개, 총 <b>10,332 probe</b>:</p>
       <ol>
-        <li>177개 인코딩 전부, unmasked(<code>vm=1</code>)</li>
-        <li>같은 177개, <code>vm=0</code> &mdash; <code>vlm.v</code>와 whole-register 행은 인코딩이 <code>vm=1</code>을 고정하므로 이 pass에서 <b>예약 인코딩</b>이 되어 거부되어야 함</li>
-        <li>같은 opcode를 쓰는 스칼라 FP 로드 4개(<code>flh/flw/fld/flq</code>, width 001/010/011/100)</li>
-        <li>범위 밖 172개 &times; SEW 4 &times; LMUL 7 &times; <code>vm</code> 2 = 9,632 probe. 범위 밖 인코딩의 거부는 vtype과 무관해야 하므로 <b>이 그룹은 별도 합법성 모델이 필요 없고</b>, 특정 SEW/LMUL에서만 예약 필드가 새어나가는 경우를 잡습니다</li>
+        <li>177개 인코딩 &times; SEW 4 &times; LMUL 7 &times; <code>vm</code> 2 = 9,912. 기대값은 RVV 합법성 규칙의 <b>Python 모델</b>이 계산합니다. <code>vlm.v</code>와 whole-register는 인코딩이 <code>vm=1</code>을 고정하므로 <code>vm=0</code> pass에서 예약 인코딩이 됩니다</li>
+        <li>예약&middot;외부 인코딩(<code>mew=1</code>, 예약 lumop 6종, 스칼라 FP 로드 4종, whole-register 예약 <code>nf</code> 3종) &times; 같은 vtype 공간 = 420. 전부 거부</li>
       </ol>
-<pre><code>tb_vcore_vld_decode_table: 9990 probes, 9 accepted, 9981 rejected, 0 failed</code></pre>
-      <p>accept 9개 = unmasked 5개 + masked 4개(<code>vle*.v</code>)이고, <code>vlm.v</code>는 <code>vm=0</code>에서 올바르게 거부됩니다. 각 probe는 세 가지를 같이 봅니다 &mdash; <code>illegal</code>이 기대와 일치하는지, accept된 행이 <code>beats != 0</code>인지, reject된 행이 <code>ctrl.op</code>를 <code>VLDOP_INVALID</code>로 남겨 죽은 opcode를 흘리지 않는지.</p>
+<pre><code>tb_vcore_vld_decode_table: 10332 probes, 5353 accepted, 4979 rejected, 0 failed</code></pre>
+      <p>각 probe는 세 가지를 같이 봅니다 &mdash; <code>illegal</code>이 기대와 일치하는지, accept된 행이 <code>beats != 0</code>인지, reject된 행이 <code>ctrl.op</code>를 <code>VLDOP_INVALID</code>로 남겨 죽은 opcode를 흘리지 않는지.</p>
 
       <div class="note">
         <span class="tag">역할 분담</span>
-        <p>범위 내 5개의 <em>vtype별</em> 합법성(EMUL 경계, vd 정렬, <code>vl &#8804; VLMAX</code>)은 이 표가 아니라 <code>tb_vcore_vld_ref</code> sweep 1이 <b>독립 모델</b>로 2,240 케이스 대조합니다. 같은 규칙을 인코딩 표에서 또 구현하면 자기 자신과 합의하게 되므로 일부러 나눴습니다 &mdash; 인코딩 표는 &ldquo;범위&rdquo;를, reference 모델은 &ldquo;합법성&rdquo;을 봅니다.</p>
+        <p>이 표의 Python 모델은 디코더와 같은 손으로 썼으므로 독립 oracle이 아니라 <b>커버리지 도구</b>입니다 &mdash; 데이터 벤치가 못 훑는 인코딩 공간 전체를 훑습니다. 합법성에 대한 독립 검증은 <code>tb_vcore_vld_ref</code>가 따로 쓴 SystemVerilog 모델로 실제 레지스터 내용을 비교하며 수행합니다. 덧붙여 이 표는 디코더의 log2 재작성이 원래 유리수 형태와 등가임을 10,332쌍에서 확인하는 역할도 합니다.</p>
       </div>
 
       <h3>7.2 모듈</h3>
       <div class="modlist">
         <div class="mod"><div class="nm">vcore_vld_pkg</div><p class="ds">타입과 정책 헬퍼. <code>MAX_ELEMS = 128</code>(EMUL 8 &times; VLEN/8), <code>VLD_TAG_W = 7</code>. <code>vld_elem_active()</code>가 &ldquo;이 원소를 실제로 fetch해야 하는가&rdquo;를 한 곳에서 정의하고, <code>vld_needs_dst_old()</code>가 old vd 읽기 생략 조건을 정의합니다.</p></div>
-        <div class="mod"><div class="nm">vcore_vld_decode</div><p class="ds">EMUL을 <em>유리수</em>(<code>emul_num/emul_den</code>)로 유지해서 분수 LMUL과 widening/narrowing EEW:SEW 비율이 정확히 합성되게 합니다. <code>1/8 &#8804; EMUL &#8804; 8</code>, <code>emul_regs = ceil(EMUL)</code>, EMUL&#8805;1일 때만 vd 정렬, <code>vl &#8804; VLMAX(SEW,LMUL)</code>, masked면 <code>vd != v0</code>(5.3).</p></div>
+        <div class="mod"><div class="nm">vcore_vld_decode</div><p class="ds">EMUL을 <em>log2 지수</em>로 들고 갑니다 &mdash; <code>emul_log2 = log2(EEW/8) &minus; log2(SEW/8) + log2(LMUL)</code>. 덧셈 하나가 분수 LMUL과 EEW:SEW 비율을 정확히 합성하고, 이후는 전부 시프트/마스크입니다: 합법성은 <code>&minus;3 &#8804; emul_log2 &#8804; 3</code>, 레지스터 수는 <code>1 &lt;&lt; max(0, emul_log2)</code>, 정렬은 그 값과의 마스크, <code>EMUL&times;NFIELDS &#8804; 8</code>은 레지스터 예산 검사에 흡수됩니다. 같은 규칙을 유리수로 쓰면 나눗셈기 4개와 곱셈기 8개가 나옵니다.</p></div>
         <div class="mod"><div class="nm">vcore_vld_sequencer</div><p class="ds">세 클러스터 중 가장 단순합니다 &mdash; 로드의 오퍼랜드는 VRF에서 오지 않으므로 uop에 소스 레지스터 주소가 아예 없고, 목적지 레지스터와 이 beat가 덮는 글로벌 원소 구간만 실어 보냅니다.</p></div>
-        <div class="mod"><div class="nm">vcore_vld_memreq</div><p class="ds">이 클러스터의 핵심. beat 0에서 목적지 EMUL 그룹 전체의 active 원소를 요청해 byte 버퍼(1024b)에 모으고, 이후 beat는 잘라 씁니다. old vd 읽기는 <em>동시에</em> 진행합니다. flush 시 <code>VLD_DRAIN</code>으로 남은 응답을 받아 버립니다.</p></div>
-        <div class="mod"><div class="nm">vcore_vld_assemble</div><p class="ds">라우팅 네트워크가 없습니다 &mdash; unit-stride 로드는 원소 <code>e</code>가 항상 목적지 슬롯 <code>e</code>에 들어가므로, 그룹 버퍼에서 이 beat의 구간을 잘라 정책 체인(그림 4)만 적용합니다. EEW 4가지를 각각 literal 폭으로 전개합니다.</p></div>
+        <div class="mod"><div class="nm">vcore_vld_memreq</div><p class="ds">이 클러스터의 핵심이자 177개를 한 데이터패스에 담는 곳. beat 0에서 목적지 그룹 전체의 active element-field를 요청해 byte 버퍼(1024b)에 모으고, 이후 beat는 잘라 씁니다. 주소는 <em>누산기 하나 + 덧셈기 하나</em>(<code>acc += stride</code>, 필드 오프셋은 시프트)이고, indexed는 <code>base + index[i]</code>로 mux합니다 &mdash; <b>곱셈기도 나눗셈기도 없습니다</b>. 인덱스는 그룹 버퍼가 아니라 <b>살아 있는 레지스터 128비트 하나</b>만 들고, 스캔이 경계를 넘을 때 다시 읽습니다. old vd 읽기는 동시에 진행하고, flush 시 <code>VLD_DRAIN</code>으로 남은 응답을 받아 버립니다.</p></div>
+        <div class="mod"><div class="nm">vcore_vld_assemble</div><p class="ds">라우팅 네트워크가 없습니다 &mdash; 원소 <code>i</code>, 필드 <code>f</code>는 항상 목적지 슬롯 <code>f&times;slots_per_field + i</code>에 들어가고 요청 엔진이 이미 거기 썼으므로, 이 beat의 구간을 잘라 정책 체인(그림 4)만 적용합니다. 정책은 <em>슬롯이 아니라 원소 인덱스</em>로 정하는데, <code>slots_per_field</code>가 항상 2의 거듭제곱이라 필드 번호를 떼는 마스크가 공짜입니다. <code>evl</code>은 fault-only-first가 깎은 값으로 들어오므로 trim이 특수 분기 없이 tail로 바뀝니다.</p></div>
         <div class="mod"><div class="nm">vcore_vld_wb</div><p class="ds">스칼라 포트가 없습니다. 추가된 것은 <code>mem_error</code>일 때 <b>VRF 쓰기를 건너뛰는</b> 것 &mdash; 반쯤 오염된 레지스터 위에서 trap 하지 않도록.</p></div>
       </div>
 
@@ -1093,14 +1088,15 @@
       <h3>7.6 검증</h3>
       <div class="kv">
         <div><span class="k">tb_vcore_vld_ref</span><span class="v">기대 상태를 <code>exp_vrf[reg][byte]</code> <b>바이트 배열</b>로 메모리 이미지에서 직접 채우는 golden reference (DUT는 packed 레지스터 + packed 그룹 버퍼). 합법성도 raw 명령어 필드에서 다시 유도 &mdash; decode 실수가 자기 자신과 합의할 수 없게. 매 케이스 <b>32개 레지스터 전부</b> 비교.</span></div>
-        <div><span class="k">sweep 1</span><span class="v">EEW(4) &times; SEW(4) &times; LMUL(7, 분수 포함) &times; vl(5) &times; 정책(4) = <b>2,240 케이스</b></span></div>
-        <div><span class="k">sweep 2</span><span class="v"><code>vlm.v</code> &times; SEW(4) &times; LMUL(7) &times; vl(6) = <b>168 케이스</b></span></div>
-        <div><span class="k">sweep 3</span><span class="v">illegal 인코딩 <b>20종</b> &mdash; segment / mew / strided / indexed 2종 / whole-reg / fof / 예약 lumop / FP 로드 width 4종 / vlm 변형 2종 / vd=v0 / vd 미정렬 / EMUL 범위 2종 / vill / vl&gt;VLMAX</span></div>
-        <div><span class="k">sweep 4</span><span class="v">합법 경계 <b>5종</b> &mdash; EMUL=8, EMUL=1/8, unmasked vd=v0, vstart&gt;vl, 미정렬 base</span></div>
-        <div><span class="k">결과</span><span class="v"><code>2,433 cases, 2,433 passed, 0 failed</code> &mdash; ideal과 stress(랜덤 ready, 레이턴시 0~7 랜덤, <b>응답 순서 무작위</b>, VRF/commit 랜덤 stall) 양쪽. MAX_OUTSTANDING 1/2/4/8/16/32 전부</span></div>
-        <div><span class="k">tb_vcore_vld_top</span><span class="v">directed <b>15/15</b> &mdash; T1 요청 집합 정확성(6케이스), T2 flush drain + 재사용, T3 bus error 억제, T4 busy_o 커버리지, T5 FIFO 연속 발행, T6 MO 클록 측정</span></div>
-        <div><span class="k">tb_vcore_vld_decode_table</span><span class="v">공식 인코딩 177개 전수 + vtype 전 구간 = <b>9,990 probe</b>, 전부 통과 (§7.1)</span></div>
-        <div><span class="k">합계</span><span class="v">2,433 &times; 7(ideal + stress 6가지 MAX_OUT) + 15 + 9,990</span></div>
+        <div><span class="k">sweep 1&ndash;2</span><span class="v">unit-stride EEW&times;SEW&times;LMUL(분수 포함)&times;vl&times;정책 = 2,240 &middot; <code>vlm.v</code> = 168</span></div>
+        <div><span class="k">sweep 3&ndash;4</span><span class="v">strided(양/비정렬/<b>0</b>/<b>음수</b> stride) = 448 &middot; indexed(unordered/ordered, 마스크 섞음) = 448</span></div>
+        <div><span class="k">sweep 5&ndash;6</span><span class="v">segment unit-stride nf=2~8 = 168 &middot; segment strided/indexed = 48</span></div>
+        <div><span class="k">sweep 7&ndash;8</span><span class="v">whole-register(vtype 일부러 불일치) = 32 &middot; fault-only-first(fault 위치 5종) = 40</span></div>
+        <div><span class="k">sweep 9&ndash;10</span><span class="v">illegal 인코딩 22종 &middot; 합법 경계 8종</span></div>
+        <div><span class="k">결과</span><span class="v"><code>3,398 cases, 3,398 passed, 0 failed</code> &mdash; ideal과 stress(랜덤 ready, 레이턴시 0~7 랜덤, <b>응답 순서 무작위</b>, VRF/commit 랜덤 stall) 양쪽</span></div>
+        <div><span class="k">sweep이 공허하지 않음</span><span class="v"><code>2,679 executed &middot; 719 illegal &middot; 16 vl-trimmed &middot; 8 trapped</code> &mdash; 둘 다 illegal로 합의해서 통과한 게 아님을 확인하는 카운터</span></div>
+        <div><span class="k">tb_vcore_vld_top</span><span class="v">directed <b>26/26</b> &mdash; T1 요청 집합 정확성 <b>9케이스</b>(masked/prestart/tail/vstart&ge;vl/vlm.v/예약/<b>음수 stride</b>/<b>인덱스 주소</b>/<b>segment 필드</b>), T2 flush drain, T3 bus error, T4 busy_o, T5 연속 발행, T6 MO 클록, <b>T7 ordered indexed in-flight&le;1</b>, <b>T8 fof trim/trap</b>, <b>T9 whole-register가 vtype 무시</b></span></div>
+        <div><span class="k">tb_vcore_vld_decode_table</span><span class="v">인코딩 &times; vtype = <b>10,332 probe</b>, 전부 통과 (§7.1)</span></div>
       </div>
 
       <div class="note">
@@ -1108,9 +1104,27 @@
         <p>데이터 비교로는 절대 안 잡히는 버그가 있습니다. RVV 1.0 7장은 로드가 <b>active 원소에만</b> 메모리를 접근하도록 요구합니다 &mdash; inactive 원소의 주소는 unmapped page를 가리켜도 합법이기 때문입니다. 따라서 masked-off / prestart / tail 원소에 요청이 하나라도 더 나가면, 결과 데이터가 전부 맞아도 진짜 버그입니다. T1은 아키텍처 정의로부터 기대 요청 집합을 독립적으로 만들고, 발행된 모든 요청의 <b>태그·주소·중복·누락</b>을 대조합니다.</p>
       </div>
 
-      <div class="note warn">
-        <span class="tag">fault-only-first의 구조적 충돌</span>
-        <p><code>vle&lt;eew&gt;ff.v</code>는 첫 원소가 아닌 원소에서 fault가 나면 trap 대신 <code>vl</code>을 줄입니다. 이 클러스터는 <b>호스트가 commit 전에 주소를 검사한다</b>는 전제(Saturn 방식)로 설계되어 있어서, 요청을 낸 뒤 fault를 관측하고 되돌리는 경로가 없습니다. fof를 넣으려면 (가) 실행 전에 <code>vl</code>을 확정할 수 있도록 pre-commit 검사 결과를 클러스터에 되돌려주거나, (나) fof만 별도 경로로 빼야 합니다. 지금은 illegal로 보고합니다.</p>
+      <h3>7.7 하드웨어 비용</h3>
+      <p><code>sv2v</code> + <code>yosys 0.33</code>(<code>proc; opt -fast</code>) generic cell 수입니다 &mdash; <b>표준셀 면적이 아니라 RTL 구조 지표</b>입니다. 비교 대상은 인코딩 5개(unit-stride + <code>vlm.v</code>)이던 이전 버전입니다.</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th></th><th class="num">이전 (5개)</th><th class="num">현재 (177개)</th><th>차이</th></tr></thead>
+          <tbody>
+            <tr><td><code>vcore_vld_decode</code> cells</td><td class="num">103</td><td class="num">201</td><td>+98</td></tr>
+            <tr><td>&nbsp;&nbsp;나눗셈기 / 나머지 / 곱셈기</td><td class="num">3 / 1 / 3</td><td class="num"><b>0 / 0 / 0</b></td><td>전부 제거</td></tr>
+            <tr><td><code>vcore_vld_memreq</code> cells</td><td class="num">278</td><td class="num">407</td><td>+129</td></tr>
+            <tr><td>&nbsp;&nbsp;곱셈기 / 나눗셈기</td><td class="num">2 / 0</td><td class="num"><b>0 / 0</b></td><td>전부 제거</td></tr>
+            <tr><td><code>vcore_vld_memreq</code> 플립플롭</td><td class="num">1,577 b</td><td class="num">1,850 b</td><td>+273 b (+17%)</td></tr>
+            <tr><td>그룹 버퍼</td><td class="num">1,024 b</td><td class="num">1,024 b</td><td><b>변화 없음</b></td></tr>
+          </tbody>
+        </table>
+        <caption>인코딩 커버리지가 35배가 됐는데 곱셈기와 나눗셈기는 오히려 전부 사라졌습니다. 이전 버전이 주소&middot;버퍼 경로에 곱셈기 2개, 합법성 검사에 나눗셈기 3개 / 나머지 1개 / 곱셈기 3개를 갖고 있었습니다.</caption>
+      </div>
+      <p>추가된 273비트 내역: <code>idx_data_q</code> 128(인덱스 레지스터 1개) &middot; <code>uop_q.ctrl</code> 확장 67 &middot; <code>acc_q</code> 32(주소 누산기) &middot; <code>slot_base_q</code>+<code>trim_vl_q</code> 34 &middot; <code>fld_q</code>+<code>idx_reg_have_q</code> 8 &middot; 플래그 4개.</p>
+
+      <div class="note">
+        <span class="tag">왜 버퍼가 안 커졌나</span>
+        <p>segment 로드의 목적지는 <code>nf</code>개 필드 그룹인데, 스펙이 <code>EMUL &times; NFIELDS &#8804; 8</code>을 요구합니다. 즉 목적지 그룹은 어떤 경우에도 <b>8개 레지스터를 넘지 않고</b>, 1024비트 버퍼는 이미 정확히 그 크기였습니다. 게다가 버퍼가 목적지 레지스터 순서로 놓여 있어서 beat <code>b</code>는 <code>[b&times;VLEN/8, (b+1)&times;VLEN/8)</code>을 그대로 잘라내면 됩니다 &mdash; 필드를 아는 주소 계산이 writeback 쪽에 전혀 필요 없습니다.</p>
       </div>
     </section>
     <section id="s8">
@@ -1247,16 +1261,16 @@
             <tr><td class="num">3</td><td><b>ALU/Perm에 <code>busy</code> 추가</b></td><td>Rocket 연결에 필요합니다. Load는 이미 있습니다. 구조는 같으므로 각 클러스터의 상태가 IDLE이 아니거나 FIFO가 비어 있지 않은 동안 high로 두면 됩니다.</td></tr>
             <tr><td class="num">4</td><td><b>Permutation 인코딩 대조 표</b></td><td>Load에는 공식 <code>rv_v</code> 파일 기준 전수 대조 표(§7.1, 9,990 probe)가 있고 ALU에도 있는데, Permutation에는 없습니다. 34개 니모닉은 reference TB가 덮지만 <em>&ldquo;나머지 전부를 거부하는가&rdquo;</em>는 확인된 적이 없습니다 &mdash; <code>funct6=0x17</code> OPIV 중복(항목 2)이 이 표가 있었으면 바로 드러났을 종류의 문제입니다. <code>generate_load_checklist.py</code>를 그대로 복제하면 됩니다.</td></tr>
             <tr><td class="num">5</td><td><b>요청 coalescing</b></td><td>unit-stride 로드가 원소당 요청 1개를 냅니다. <code>memreq</code>의 스캔 루프와 태그 의미(원소 인덱스 → 요청 번호)를 바꾸고, 응답을 여러 원소에 분배하는 작업이 필요합니다. 캐시에 붙이기 전에 해야 합니다.</td></tr>
-            <tr><td class="num">6</td><td>Store 클러스터</td><td><code>vse*.v</code> + <code>vsm.v</code>. Load와 대칭이지만 <em>VRF 읽기가 늘고 메모리 쓰기 순서 제약이 생깁니다</em>. RVWMO상 <code>vsoxei</code>만 원소 순서를 보장하므로 unit-stride는 순서 자유.</td></tr>
-            <tr><td class="num">7</td><td>메모리 명령 나머지</td><td>strided / indexed / segment / whole-register / fault-only-first. fof는 §7.6의 구조적 충돌 때문에 별도 설계가 필요합니다.</td></tr>
-            <tr><td class="num">8</td><td>ALU 남은 8개 인코딩</td><td>목표 범위 245개 중 237개 완료. FP64 35개는 D 확장을 범위에서 뺐으므로 대상 아님.</td></tr>
-            <tr><td class="num">9</td><td>ALU TOP 통합 테스트 확대</td><td>현재 90/280. decode/execute는 237개인데 통합 레벨 검증이 뒤처져 있습니다.</td></tr>
-            <tr><td class="num">10</td><td>공용 <code>vcore_pkg</code></td><td>세 패키지가 <code>vcore_vrf_read_req_t</code>/<code>vcore_vrf_write_req_t</code>를 중복 선언합니다. 한 곳으로 모으는 것이 맞고, 그 전까지는 어긋나지 않게 주의.</td></tr>
-            <tr><td class="num">11</td><td class="mono">flush_i</td><td>세 클러스터의 TB에서 모두 상수 0입니다 &mdash; Load의 T2만 실제로 flush를 구동합니다. ALU/Perm의 flush 경로는 아직 한 번도 자극된 적이 없습니다.</td></tr>
-            <tr><td class="num">12</td><td>1GHz 타이밍</td><td>ALU의 <code>TIMING_1GHZ.md</code>에 위험 경로 8개. 라이브러리/SDC/합성/STA 없이는 달성으로 표시하지 않습니다.</td></tr>
-            <tr><td class="num">13</td><td>VLEN 고정</td><td>세 패키지가 <code>mask_snapshot</code> 폭 때문에 <b>VLEN=128에 묶여</b> 있습니다. 다른 VLEN은 재설계입니다.</td></tr>
-            <tr><td class="num">14</td><td>비정렬 원소 접근</td><td>Load가 메모리 포트의 지원을 전제합니다. 못 하는 버스면 호스트가 정렬을 보장하거나 misaligned trap 경로가 필요합니다.</td></tr>
-            <tr><td class="num">15</td><td>요청 스캔 1원소/클록</td><td>mask가 희소하면 inactive 원소를 건너뛰는 데도 클록을 쓰므로 스캔 자체가 병목이 될 수 있습니다 (priority encoder로 개선 가능).</td></tr>
+            <tr><td class="num">6</td><td><b>Store 클러스터</b></td><td>133개 인코딩. Load 클러스터의 주소 생성&middot;segment&middot;indexed 구조를 그대로 뒤집으면 되지만, <em>VRF 읽기가 늘고 메모리 쓰기 순서 제약이 생깁니다</em>. RVWMO상 <code>vsoxei</code>만 원소 순서를 보장하므로 unit-stride는 순서 자유. <b>Load 177개가 끝났으니 이제 여기가 벡터 메모리의 유일한 공백입니다.</b></td></tr>
+            
+            <tr><td class="num">7</td><td>ALU 남은 8개 인코딩</td><td>목표 범위 245개 중 237개 완료. FP64 35개는 D 확장을 범위에서 뺐으므로 대상 아님.</td></tr>
+            <tr><td class="num">8</td><td>ALU TOP 통합 테스트 확대</td><td>현재 90/280. decode/execute는 237개인데 통합 레벨 검증이 뒤처져 있습니다.</td></tr>
+            <tr><td class="num">9</td><td>공용 <code>vcore_pkg</code></td><td>세 패키지가 <code>vcore_vrf_read_req_t</code>/<code>vcore_vrf_write_req_t</code>를 중복 선언합니다. 한 곳으로 모으는 것이 맞고, 그 전까지는 어긋나지 않게 주의.</td></tr>
+            <tr><td class="num">10</td><td class="mono">flush_i</td><td>세 클러스터의 TB에서 모두 상수 0입니다 &mdash; Load의 T2만 실제로 flush를 구동합니다. ALU/Perm의 flush 경로는 아직 한 번도 자극된 적이 없습니다.</td></tr>
+            <tr><td class="num">11</td><td>1GHz 타이밍</td><td>ALU의 <code>TIMING_1GHZ.md</code>에 위험 경로 8개. 라이브러리/SDC/합성/STA 없이는 달성으로 표시하지 않습니다.</td></tr>
+            <tr><td class="num">12</td><td>VLEN 고정</td><td>세 패키지가 <code>mask_snapshot</code> 폭 때문에 <b>VLEN=128에 묶여</b> 있습니다. 다른 VLEN은 재설계입니다.</td></tr>
+            <tr><td class="num">13</td><td>비정렬 원소 접근</td><td>Load가 메모리 포트의 지원을 전제합니다. 못 하는 버스면 호스트가 정렬을 보장하거나 misaligned trap 경로가 필요합니다.</td></tr>
+            <tr><td class="num">14</td><td>요청 스캔 1원소/클록</td><td>mask가 희소하면 inactive 원소를 건너뛰는 데도 클록을 쓰므로 스캔 자체가 병목이 될 수 있습니다 (priority encoder로 개선 가능).</td></tr>
           </tbody>
         </table>
       </div>

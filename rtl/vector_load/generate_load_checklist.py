@@ -27,14 +27,37 @@ CACHE = Path(__file__).with_name(".rv_v_cache")
 
 LOAD_FP_OPCODE = 0x07
 
-# What rtl/vector_load actually decodes and executes.
-IMPLEMENTED = {"vle8.v", "vle16.v", "vle32.v", "vle64.v", "vlm.v"}
+# rtl/vector_load decodes and executes every official vector load form.
+# Anything still outside the cluster would be listed here.
+NOT_IMPLEMENTED: set[str] = set()
 
-# Every case tb_vcore_vld_ref / tb_vcore_vld_top exercise per instruction.
-REF_SWEEP = ("SEW x LMUL(분수 포함) x vl x vstart x vta/vma/vm, "
-             "golden reference 32 레지스터 전수 비교")
-DIRECTED = ("요청 집합 정확성(T1), flush drain(T2), bus error(T3), "
-            "busy_o(T4), 연속 발행(T5), MO 클록(T6)")
+# What the benches exercise, per family.
+REF_SWEEP = {
+    "Unit-stride":        "EEW x SEW x LMUL(분수 포함) x vl x vstart x 정책",
+    "Segment unit-stride":"nf=2~8 x EEW x LMUL x 정책",
+    "Mask memory":        "SEW x LMUL x vl (evl=ceil(vl/8), tail-agnostic 강제)",
+    "Strided":            "EEW x SEW x LMUL x stride(양/0/음/비정렬)",
+    "Segment strided":    "nf x EEW x LMUL x segment stride",
+    "Indexed unordered":  "index EEW x SEW x LMUL x mask",
+    "Indexed ordered":    "index EEW x SEW x LMUL, 단일 미결 강제",
+    "Segment indexed unordered": "nf x index EEW x LMUL",
+    "Segment indexed ordered":   "nf x index EEW x LMUL",
+    "Whole register":     "NREG x EEW x vstart, vtype 무시 확인",
+    "Fault-only-first":   "fault 위치 x EEW x nf, trim/trap 구분",
+}
+DIRECTED = {
+    "Unit-stride":        "T1a/b/c/d 요청 집합, T2 flush, T3 bus error, T4 busy_o, T5 연속 발행, T6 MO 클록",
+    "Segment unit-stride":"T1i 필드별 요청 집합",
+    "Mask memory":        "T1e ceil(vl/8) 요청",
+    "Strided":            "T1g 음수 stride 주소",
+    "Segment strided":    "",
+    "Indexed unordered":  "T1h 인덱스 주소, T7 전체 창 사용",
+    "Indexed ordered":    "T7 in-flight 1 강제 + 수집 정확성",
+    "Segment indexed unordered": "",
+    "Segment indexed ordered":   "",
+    "Whole register":     "T9 vtype/vl/v0 무시",
+    "Fault-only-first":   "T8 trim 보고 / element 0 trap / tail 전환",
+}
 
 EEW_BY_WIDTH = {0x0: 8, 0x5: 16, 0x6: 32, 0x7: 64}
 
@@ -146,7 +169,7 @@ def main() -> None:
             mnemonic = name if nf == 0 or nf_fixed is not None else segment_name(name, nf)
             fam = family(mop, lumop, nf if nf_fixed is None else 0)
             prior = previous.get(mnemonic, {})
-            implemented = mnemonic in IMPLEMENTED
+            implemented = mnemonic not in NOT_IMPLEMENTED
             rows.append({
                 "mnemonic": mnemonic,
                 "family": fam,
@@ -160,12 +183,9 @@ def main() -> None:
                 "decode": "yes" if implemented else prior.get("decode", "no"),
                 "execute": "yes" if implemented else prior.get("execute", "no"),
                 "decode_table_test": "tb_vcore_vld_decode_table",
-                "unit_test": (REF_SWEEP if implemented
-                              else prior.get("unit_test", "")),
-                "integration_test": (DIRECTED if implemented
-                                     else prior.get("integration_test", "")),
-                "notes": prior.get("notes", "") or (
-                    "" if implemented else "범위 밖 — decode가 illegal_op으로 보고"),
+                "unit_test": (REF_SWEEP.get(fam, "") if implemented else ""),
+                "integration_test": (DIRECTED.get(fam, "") if implemented else ""),
+                "notes": ("" if implemented else "범위 밖 — decode가 illegal_op으로 보고"),
             })
 
     if len(rows) != 177:
@@ -192,9 +212,8 @@ def main() -> None:
         f"현재 `decode=yes`: **{decoded}/177**, `execute=yes`: **{executed}/177**, "
         f"directed 통합 테스트: **{integrated}/177**.",
         "",
-        "나머지는 미구현이 아니라 **범위 밖**이며, decode가 `illegal_op`으로 보고해 TOP이",
-        "다른 곳으로 라우팅하거나 trap을 걸 수 있게 합니다. 조용히 오동작하지 않는 것이",
-        "`tb_vcore_vld_decode_table`이 177개 전수로 확인하는 내용입니다.",
+        "`tb_vcore_vld_decode_table`이 177개 인코딩 전부를 vtype 전 구간에 걸쳐 대조하고,",
+        "`tb_vcore_vld_ref`가 독립 모델로 데이터를 전수 비교합니다.",
         "",
         "| 연산군 | 인코딩 수 | 구현 |",
         "|---|---:|---:|",

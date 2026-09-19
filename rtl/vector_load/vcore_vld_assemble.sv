@@ -1,25 +1,22 @@
 // Load datapath: slice this beat's destination register out of the group
 // buffer and apply the RVV prestart / tail / mask policy chain. Purely
-// combinational, mirroring vcore_perm_core (which does the same job for
-// permutation results) -- with no routing network, because a unit-stride
-// load's element e always lands in destination slot e.
+// combinational, and with no routing network -- element i of field f always
+// lands in destination slot f*slots_per_field + i, which is where the
+// request engine already wrote it.
 //
-// The policy chain is the same one the permutation cluster uses, reduced to
-// the three cases a load can produce:
+// Policy is decided by the ELEMENT index, not the slot: for a segment load
+// every field sees the same prestart/body/tail split, so the element index
+// is the slot with the field number masked off. slots_per_field is always a
+// power of two (regs_per_field and VLEN/EEW both are), so that mask is free.
 //
 //   vstart >= evl              -> nothing updated at all (RVV 1.0 5.4)
-//   slot < vstart              -> prestart, undisturbed
-//   slot >= evl                -> tail, vta ? agnostic-ones : undisturbed
-//   masked off (vm=0, v0[e]=0) -> inactive, vma ? agnostic-ones : undisturbed
+//   slot's element < vstart    -> prestart, undisturbed
+//   slot's element >= evl      -> tail, vta ? agnostic-ones : undisturbed
+//   masked off (vm=0, v0[i]=0) -> inactive, vma ? agnostic-ones : undisturbed
 //   otherwise                  -> the value fetched from memory
 //
-// "Agnostic" is implemented as all-ones, the same choice the permutation
-// cluster and the ALU make, so the golden reference can be exact.
-//
-// EEW is a runtime value, so each width gets its own literal-width branch:
-// a `+:` part-select width must be an elaboration-time constant, and a
-// function argument of type int is not one even when every call site passes
-// a literal (see the note at the top of vcore_perm_core).
+// `evl` arrives already trimmed when a fault-only-first load hit an error,
+// so a trim simply turns body elements into tail.
 module vcore_vld_assemble #(
   parameter int unsigned VLEN = 128
 ) (
@@ -40,72 +37,77 @@ module vcore_vld_assemble #(
 
   typedef enum logic [1:0] {SEL_OLD, SEL_ONES, SEL_LOAD} sel_e;
 
-  // Which of the three sources owns destination slot `gidx` (a GLOBAL
-  // element index inside the destination EMUL group)?
+  logic [16:0] slots_mask;
+  assign slots_mask = ctrl_i.slots_per_field - 17'd1;
+
+  // Which of the three sources owns this destination slot?
   function automatic sel_e slot_sel(
     input vcore_vld_ctrl_t ctrl,
     input logic [VLEN-1:0] mask,
-    input logic [16:0] gidx
+    input logic [16:0] elem
   );
     logic mbit;
-    // RVV 1.0 5.4: "When vstart >= vl, there are no body elements, and no
-    // elements are updated in any destination vector register group,
-    // including that no tail elements are updated with agnostic values."
+    // RVV 1.0 5.4: when vstart >= vl no element is updated in any
+    // destination group, not even a tail element with an agnostic value.
     if (ctrl.vstart >= ctrl.evl) return SEL_OLD;
-    if (gidx < ctrl.vstart)      return SEL_OLD;              // prestart
-    if (gidx >= ctrl.evl)        return ctrl.vta ? SEL_ONES : SEL_OLD; // tail
-    mbit = (int'(gidx) < int'(VLEN)) ? mask[gidx[MASK_IDX_W-1:0]] : 1'b0;
-    // RVV 1.0 7: "Masked vector loads do not update inactive elements in
-    // the destination vector register group, unless mask agnostic is
-    // specified (vtype.vma=1)."
+    if (elem < ctrl.vstart)      return SEL_OLD;              // prestart
+    if (elem >= ctrl.evl)        return ctrl.vta ? SEL_ONES : SEL_OLD;
+    mbit = (int'(elem) < int'(VLEN)) ? mask[elem[MASK_IDX_W-1:0]] : 1'b0;
+    // RVV 1.0 7: masked loads do not update inactive elements unless
+    // mask-agnostic is set.
     if (!ctrl.vm && !mbit)       return ctrl.vma ? SEL_ONES : SEL_OLD;
     return SEL_LOAD;
   endfunction
 
-  logic [16:0] gidx;
+  logic [16:0] gslot, gelem;
   sel_e sel;
 
   always_comb begin
     data_o    = dst_old_i;
     illegal_o = !vld_supported(ctrl_i.op) || !veew_supported(ctrl_i.eew);
-    gidx      = '0;
+    gslot     = '0;
+    gelem     = '0;
     sel       = SEL_OLD;
 
     if (!illegal_o) begin
       unique case (ctrl_i.eew)
         VEEW_8: for (int i = 0; i < VLEN/8; i++) begin
-          gidx = ctrl_i.element_base + 17'(i);
-          sel  = slot_sel(ctrl_i, mask_i, gidx);
+          gslot = ctrl_i.element_base + 17'(i);
+          gelem = gslot & slots_mask;
+          sel   = slot_sel(ctrl_i, mask_i, gelem);
           unique case (sel)
             SEL_ONES: data_o[i*8 +: 8] = '1;
-            SEL_LOAD: data_o[i*8 +: 8] = data_group_i[(int'(gidx) % SLOTS8)*8 +: 8];
+            SEL_LOAD: data_o[i*8 +: 8] = data_group_i[(int'(gslot) % SLOTS8)*8 +: 8];
             default:  data_o[i*8 +: 8] = dst_old_i[i*8 +: 8];
           endcase
         end
         VEEW_16: for (int i = 0; i < VLEN/16; i++) begin
-          gidx = ctrl_i.element_base + 17'(i);
-          sel  = slot_sel(ctrl_i, mask_i, gidx);
+          gslot = ctrl_i.element_base + 17'(i);
+          gelem = gslot & slots_mask;
+          sel   = slot_sel(ctrl_i, mask_i, gelem);
           unique case (sel)
             SEL_ONES: data_o[i*16 +: 16] = '1;
-            SEL_LOAD: data_o[i*16 +: 16] = data_group_i[(int'(gidx) % SLOTS16)*16 +: 16];
+            SEL_LOAD: data_o[i*16 +: 16] = data_group_i[(int'(gslot) % SLOTS16)*16 +: 16];
             default:  data_o[i*16 +: 16] = dst_old_i[i*16 +: 16];
           endcase
         end
         VEEW_32: for (int i = 0; i < VLEN/32; i++) begin
-          gidx = ctrl_i.element_base + 17'(i);
-          sel  = slot_sel(ctrl_i, mask_i, gidx);
+          gslot = ctrl_i.element_base + 17'(i);
+          gelem = gslot & slots_mask;
+          sel   = slot_sel(ctrl_i, mask_i, gelem);
           unique case (sel)
             SEL_ONES: data_o[i*32 +: 32] = '1;
-            SEL_LOAD: data_o[i*32 +: 32] = data_group_i[(int'(gidx) % SLOTS32)*32 +: 32];
+            SEL_LOAD: data_o[i*32 +: 32] = data_group_i[(int'(gslot) % SLOTS32)*32 +: 32];
             default:  data_o[i*32 +: 32] = dst_old_i[i*32 +: 32];
           endcase
         end
         VEEW_64: for (int i = 0; i < VLEN/64; i++) begin
-          gidx = ctrl_i.element_base + 17'(i);
-          sel  = slot_sel(ctrl_i, mask_i, gidx);
+          gslot = ctrl_i.element_base + 17'(i);
+          gelem = gslot & slots_mask;
+          sel   = slot_sel(ctrl_i, mask_i, gelem);
           unique case (sel)
             SEL_ONES: data_o[i*64 +: 64] = '1;
-            SEL_LOAD: data_o[i*64 +: 64] = data_group_i[(int'(gidx) % SLOTS64)*64 +: 64];
+            SEL_LOAD: data_o[i*64 +: 64] = data_group_i[(int'(gslot) % SLOTS64)*64 +: 64];
             default:  data_o[i*64 +: 64] = dst_old_i[i*64 +: 64];
           endcase
         end

@@ -1,178 +1,178 @@
 ﻿mnemonic,family,profile,eew_bits,width,mop,nf,lumop,vm_constraint,decode,execute,decode_table_test,unit_test,integration_test,notes
-vle16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b000,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vle32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b000,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vle64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b000,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vle8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b000,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg2e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b001,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg2e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b001,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg2e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b001,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg2e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b001,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg3e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b010,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg3e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b010,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg3e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b010,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg3e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b010,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg4e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b011,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg4e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b011,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg4e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b011,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg4e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b011,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg5e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b100,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg5e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b100,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg5e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b100,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg5e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b100,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg6e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b101,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg6e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b101,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg6e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b101,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg6e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b101,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg7e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b110,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg7e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b110,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg7e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b110,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg7e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b110,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg8e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b111,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg8e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b111,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg8e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b111,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg8e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b111,0b10000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxei16.v,Indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxei32.v,Indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxei64.v,Indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxei8.v,Indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxei16.v,Indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxei32.v,Indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxei64.v,Indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxei8.v,Indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlm.v,Mask memory,Zve32x/Zve64x base,8,0b000,0b00,0b000,0b01011,1,yes,yes,tb_vcore_vld_decode_table,"SEW x LMUL(분수 포함) x vl x vstart x vta/vma/vm, golden reference 32 레지스터 전수 비교","요청 집합 정확성(T1), flush drain(T2), bus error(T3), busy_o(T4), 연속 발행(T5), MO 클록(T6)",
-vloxseg2ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg2ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg2ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg2ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg3ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg3ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg3ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg3ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg4ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg4ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg4ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg4ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg5ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg5ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg5ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg5ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg6ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg6ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg6ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg6ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg7ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg7ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg7ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg7ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg8ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg8ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg8ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vloxseg8ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg2ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg2ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg2ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg2ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg3ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg3ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg3ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg3ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg4ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg4ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg4ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg4ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg5ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg5ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg5ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg5ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg6ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg6ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg6ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg6ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg7ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg7ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg7ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg7ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg8ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg8ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg8ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vluxseg8ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg2e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg2e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg2e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg2e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b001,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg3e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg3e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg3e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg3e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b010,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg4e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg4e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg4e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg4e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b011,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg5e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg5e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg5e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg5e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b100,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg6e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg6e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg6e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg6e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b101,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg7e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg7e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg7e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg7e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b110,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg8e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg8e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg8e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlsseg8e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b111,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg2e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b001,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg2e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b001,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg2e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b001,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg2e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b001,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg3e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b010,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg3e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b010,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg3e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b010,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg3e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b010,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg4e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b011,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg4e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b011,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg4e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b011,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg4e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b011,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg5e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b100,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg5e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b100,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg5e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b100,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg5e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b100,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg6e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b101,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg6e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b101,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg6e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b101,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg6e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b101,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg7e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b110,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg7e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b110,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg7e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b110,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg7e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b110,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg8e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b111,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg8e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b111,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg8e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b111,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlseg8e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b111,0b00000,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlse16.v,Strided,Zve32x/Zve64x base,16,0b101,0b10,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlse32.v,Strided,Zve32x/Zve64x base,32,0b110,0b10,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlse64.v,Strided,Zve32x/Zve64x base,64,0b111,0b10,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vlse8.v,Strided,Zve32x/Zve64x base,8,0b000,0b10,0b000,vs2/rs2,variable,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vle16.v,Unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b000,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,"SEW x LMUL(분수 포함) x vl x vstart x vta/vma/vm, golden reference 32 레지스터 전수 비교","요청 집합 정확성(T1), flush drain(T2), bus error(T3), busy_o(T4), 연속 발행(T5), MO 클록(T6)",
-vle32.v,Unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b000,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,"SEW x LMUL(분수 포함) x vl x vstart x vta/vma/vm, golden reference 32 레지스터 전수 비교","요청 집합 정확성(T1), flush drain(T2), bus error(T3), busy_o(T4), 연속 발행(T5), MO 클록(T6)",
-vle64.v,Unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b000,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,"SEW x LMUL(분수 포함) x vl x vstart x vta/vma/vm, golden reference 32 레지스터 전수 비교","요청 집합 정확성(T1), flush drain(T2), bus error(T3), busy_o(T4), 연속 발행(T5), MO 클록(T6)",
-vle8.v,Unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b000,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,"SEW x LMUL(분수 포함) x vl x vstart x vta/vma/vm, golden reference 32 레지스터 전수 비교","요청 집합 정확성(T1), flush drain(T2), bus error(T3), busy_o(T4), 연속 발행(T5), MO 클록(T6)",
-vl1re16.v,Whole register,Zve32x/Zve64x base,16,0b101,0b00,0b000,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl1re32.v,Whole register,Zve32x/Zve64x base,32,0b110,0b00,0b000,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl1re64.v,Whole register,Zve32x/Zve64x base,64,0b111,0b00,0b000,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl1re8.v,Whole register,Zve32x/Zve64x base,8,0b000,0b00,0b000,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl2re16.v,Whole register,Zve32x/Zve64x base,16,0b101,0b00,0b001,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl2re32.v,Whole register,Zve32x/Zve64x base,32,0b110,0b00,0b001,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl2re64.v,Whole register,Zve32x/Zve64x base,64,0b111,0b00,0b001,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl2re8.v,Whole register,Zve32x/Zve64x base,8,0b000,0b00,0b001,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl4re16.v,Whole register,Zve32x/Zve64x base,16,0b101,0b00,0b011,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl4re32.v,Whole register,Zve32x/Zve64x base,32,0b110,0b00,0b011,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl4re64.v,Whole register,Zve32x/Zve64x base,64,0b111,0b00,0b011,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl4re8.v,Whole register,Zve32x/Zve64x base,8,0b000,0b00,0b011,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl8re16.v,Whole register,Zve32x/Zve64x base,16,0b101,0b00,0b111,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl8re32.v,Whole register,Zve32x/Zve64x base,32,0b110,0b00,0b111,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl8re64.v,Whole register,Zve32x/Zve64x base,64,0b111,0b00,0b111,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
-vl8re8.v,Whole register,Zve32x/Zve64x base,8,0b000,0b00,0b111,0b01000,1,no,no,tb_vcore_vld_decode_table,,,범위 밖 — decode가 illegal_op으로 보고
+vle16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b000,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vle32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b000,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vle64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b000,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vle8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b000,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg2e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b001,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg2e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b001,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg2e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b001,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg2e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b001,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg3e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b010,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg3e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b010,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg3e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b010,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg3e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b010,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg4e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b011,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg4e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b011,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg4e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b011,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg4e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b011,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg5e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b100,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg5e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b100,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg5e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b100,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg5e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b100,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg6e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b101,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg6e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b101,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg6e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b101,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg6e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b101,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg7e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b110,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg7e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b110,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg7e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b110,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg7e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b110,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg8e16ff.v,Fault-only-first,Zve32x/Zve64x base,16,0b101,0b00,0b111,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg8e32ff.v,Fault-only-first,Zve32x/Zve64x base,32,0b110,0b00,0b111,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg8e64ff.v,Fault-only-first,Zve32x/Zve64x base,64,0b111,0b00,0b111,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vlseg8e8ff.v,Fault-only-first,Zve32x/Zve64x base,8,0b000,0b00,0b111,0b10000,variable,yes,yes,tb_vcore_vld_decode_table,"fault 위치 x EEW x nf, trim/trap 구분",T8 trim 보고 / element 0 trap / tail 전환,
+vloxei16.v,Indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,"index EEW x SEW x LMUL, 단일 미결 강제",T7 in-flight 1 강제 + 수집 정확성,
+vloxei32.v,Indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,"index EEW x SEW x LMUL, 단일 미결 강제",T7 in-flight 1 강제 + 수집 정확성,
+vloxei64.v,Indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,"index EEW x SEW x LMUL, 단일 미결 강제",T7 in-flight 1 강제 + 수집 정확성,
+vloxei8.v,Indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,"index EEW x SEW x LMUL, 단일 미결 강제",T7 in-flight 1 강제 + 수집 정확성,
+vluxei16.v,Indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,index EEW x SEW x LMUL x mask,"T1h 인덱스 주소, T7 전체 창 사용",
+vluxei32.v,Indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,index EEW x SEW x LMUL x mask,"T1h 인덱스 주소, T7 전체 창 사용",
+vluxei64.v,Indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,index EEW x SEW x LMUL x mask,"T1h 인덱스 주소, T7 전체 창 사용",
+vluxei8.v,Indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,index EEW x SEW x LMUL x mask,"T1h 인덱스 주소, T7 전체 창 사용",
+vlm.v,Mask memory,Zve32x/Zve64x base,8,0b000,0b00,0b000,0b01011,1,yes,yes,tb_vcore_vld_decode_table,"SEW x LMUL x vl (evl=ceil(vl/8), tail-agnostic 강제)",T1e ceil(vl/8) 요청,
+vloxseg2ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg2ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg2ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg2ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg3ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg3ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg3ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg3ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg4ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg4ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg4ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg4ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg5ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg5ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg5ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg5ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg6ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg6ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg6ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg6ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg7ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg7ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg7ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg7ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg8ei16.v,Segment indexed ordered,Zve32x/Zve64x base,16,0b101,0b11,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg8ei32.v,Segment indexed ordered,Zve32x/Zve64x base,32,0b110,0b11,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg8ei64.v,Segment indexed ordered,RV32 V 제외 (EEW=64 index),64,0b111,0b11,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vloxseg8ei8.v,Segment indexed ordered,Zve32x/Zve64x base,8,0b000,0b11,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg2ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg2ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg2ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg2ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg3ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg3ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg3ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg3ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg4ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg4ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg4ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg4ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg5ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg5ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg5ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg5ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg6ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg6ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg6ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg6ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg7ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg7ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg7ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg7ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg8ei16.v,Segment indexed unordered,Zve32x/Zve64x base,16,0b101,0b01,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg8ei32.v,Segment indexed unordered,Zve32x/Zve64x base,32,0b110,0b01,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg8ei64.v,Segment indexed unordered,RV32 V 제외 (EEW=64 index),64,0b111,0b01,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vluxseg8ei8.v,Segment indexed unordered,Zve32x/Zve64x base,8,0b000,0b01,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x index EEW x LMUL,,
+vlsseg2e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg2e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg2e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg2e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b001,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg3e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg3e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg3e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg3e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b010,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg4e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg4e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg4e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg4e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b011,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg5e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg5e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg5e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg5e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b100,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg6e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg6e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg6e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg6e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b101,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg7e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg7e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg7e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg7e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b110,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg8e16.v,Segment strided,Zve32x/Zve64x base,16,0b101,0b10,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg8e32.v,Segment strided,Zve32x/Zve64x base,32,0b110,0b10,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg8e64.v,Segment strided,Zve32x/Zve64x base,64,0b111,0b10,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlsseg8e8.v,Segment strided,Zve32x/Zve64x base,8,0b000,0b10,0b111,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,nf x EEW x LMUL x segment stride,,
+vlseg2e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b001,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg2e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b001,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg2e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b001,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg2e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b001,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg3e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b010,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg3e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b010,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg3e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b010,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg3e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b010,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg4e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b011,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg4e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b011,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg4e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b011,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg4e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b011,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg5e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b100,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg5e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b100,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg5e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b100,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg5e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b100,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg6e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b101,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg6e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b101,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg6e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b101,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg6e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b101,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg7e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b110,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg7e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b110,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg7e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b110,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg7e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b110,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg8e16.v,Segment unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b111,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg8e32.v,Segment unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b111,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg8e64.v,Segment unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b111,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlseg8e8.v,Segment unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b111,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,nf=2~8 x EEW x LMUL x 정책,T1i 필드별 요청 집합,
+vlse16.v,Strided,Zve32x/Zve64x base,16,0b101,0b10,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,EEW x SEW x LMUL x stride(양/0/음/비정렬),T1g 음수 stride 주소,
+vlse32.v,Strided,Zve32x/Zve64x base,32,0b110,0b10,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,EEW x SEW x LMUL x stride(양/0/음/비정렬),T1g 음수 stride 주소,
+vlse64.v,Strided,Zve32x/Zve64x base,64,0b111,0b10,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,EEW x SEW x LMUL x stride(양/0/음/비정렬),T1g 음수 stride 주소,
+vlse8.v,Strided,Zve32x/Zve64x base,8,0b000,0b10,0b000,vs2/rs2,variable,yes,yes,tb_vcore_vld_decode_table,EEW x SEW x LMUL x stride(양/0/음/비정렬),T1g 음수 stride 주소,
+vle16.v,Unit-stride,Zve32x/Zve64x base,16,0b101,0b00,0b000,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,EEW x SEW x LMUL(분수 포함) x vl x vstart x 정책,"T1a/b/c/d 요청 집합, T2 flush, T3 bus error, T4 busy_o, T5 연속 발행, T6 MO 클록",
+vle32.v,Unit-stride,Zve32x/Zve64x base,32,0b110,0b00,0b000,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,EEW x SEW x LMUL(분수 포함) x vl x vstart x 정책,"T1a/b/c/d 요청 집합, T2 flush, T3 bus error, T4 busy_o, T5 연속 발행, T6 MO 클록",
+vle64.v,Unit-stride,Zve32x/Zve64x base,64,0b111,0b00,0b000,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,EEW x SEW x LMUL(분수 포함) x vl x vstart x 정책,"T1a/b/c/d 요청 집합, T2 flush, T3 bus error, T4 busy_o, T5 연속 발행, T6 MO 클록",
+vle8.v,Unit-stride,Zve32x/Zve64x base,8,0b000,0b00,0b000,0b00000,variable,yes,yes,tb_vcore_vld_decode_table,EEW x SEW x LMUL(분수 포함) x vl x vstart x 정책,"T1a/b/c/d 요청 집합, T2 flush, T3 bus error, T4 busy_o, T5 연속 발행, T6 MO 클록",
+vl1re16.v,Whole register,Zve32x/Zve64x base,16,0b101,0b00,0b000,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl1re32.v,Whole register,Zve32x/Zve64x base,32,0b110,0b00,0b000,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl1re64.v,Whole register,Zve32x/Zve64x base,64,0b111,0b00,0b000,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl1re8.v,Whole register,Zve32x/Zve64x base,8,0b000,0b00,0b000,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl2re16.v,Whole register,Zve32x/Zve64x base,16,0b101,0b00,0b001,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl2re32.v,Whole register,Zve32x/Zve64x base,32,0b110,0b00,0b001,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl2re64.v,Whole register,Zve32x/Zve64x base,64,0b111,0b00,0b001,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl2re8.v,Whole register,Zve32x/Zve64x base,8,0b000,0b00,0b001,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl4re16.v,Whole register,Zve32x/Zve64x base,16,0b101,0b00,0b011,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl4re32.v,Whole register,Zve32x/Zve64x base,32,0b110,0b00,0b011,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl4re64.v,Whole register,Zve32x/Zve64x base,64,0b111,0b00,0b011,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl4re8.v,Whole register,Zve32x/Zve64x base,8,0b000,0b00,0b011,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl8re16.v,Whole register,Zve32x/Zve64x base,16,0b101,0b00,0b111,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl8re32.v,Whole register,Zve32x/Zve64x base,32,0b110,0b00,0b111,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl8re64.v,Whole register,Zve32x/Zve64x base,64,0b111,0b00,0b111,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,
+vl8re8.v,Whole register,Zve32x/Zve64x base,8,0b000,0b00,0b111,0b01000,1,yes,yes,tb_vcore_vld_decode_table,"NREG x EEW x vstart, vtype 무시 확인",T9 vtype/vl/v0 무시,

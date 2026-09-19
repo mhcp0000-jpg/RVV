@@ -1,12 +1,17 @@
 // Writeback: same WB_IDLE/WB_WRITE/WB_EVENT flow as vcore_perm_wb, minus
 // the scalar destination port (a load never writes a GPR/FPR).
 //
-// One addition: a beat whose group fetch came back with an error does NOT
-// write the VRF. The host is supposed to have checked every address before
+// Two additions. A beat whose group fetch came back with an error does NOT
+// write the VRF: the host is supposed to have checked every address before
 // commit (see vcore_vld_pkg), so an error response means the pre-commit
-// check and the bus disagree; leaving the destination untouched and raising
-// mem_error on the commit event lets the host trap on an architecturally
-// clean register file rather than on half-poisoned data.
+// check and the bus disagree, and leaving the destination untouched lets the
+// host trap on an architecturally clean register file rather than on
+// half-poisoned data.
+//
+// A fault-only-first trim is the opposite case -- architectural, not an
+// escape. The beat DOES write, with the elements at and above the trim point
+// already turned into tail by the assemble stage, and the commit carries the
+// reduced vl for the host to put back into the CSR.
 module vcore_vld_wb #(
   parameter int unsigned VLEN = 128
 ) (
@@ -52,6 +57,8 @@ module vcore_vld_wb #(
   assign commit_o.last_beat  = meta_q.last_beat;
   assign commit_o.illegal_op = meta_q.illegal_op;
   assign commit_o.mem_error  = meta_q.mem_error;
+  assign commit_o.vl_trimmed = meta_q.vl_trimmed;
+  assign commit_o.new_vl     = meta_q.new_vl;
   assign seq_ack_o = commit_o;
 
   always_ff @(posedge clk_i) begin

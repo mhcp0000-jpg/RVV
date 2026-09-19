@@ -16,7 +16,12 @@
 // the sequencer hands a beat to vcore_vld_memreq, which fires memory
 // requests for that instruction's active elements and waits for every
 // response before the assemble stage runs. Beat 0 fetches the whole
-// destination EMUL group, so later beats need no bus traffic at all.
+// destination group, so later beats need no bus traffic at all.
+//
+// Scope: every RVV 1.0 vector load -- unit-stride, strided, indexed
+// (unordered and ordered), fault-only-first, whole-register, the mask load,
+// and the segment form of each. They share one datapath; see the header of
+// vcore_vld_memreq for why that costs so little.
 module vcore_vld_top #(
   parameter int unsigned VLEN = 128,
   parameter int unsigned ISSUE_DEPTH = 3,
@@ -30,7 +35,8 @@ module vcore_vld_top #(
   output logic                                cmd_ready_o,
   input  vcore_vld_pkg::vcore_vld_cmd_t       cmd_i,
 
-  // Old-destination read port (1R1W VRF, shared with the other clusters).
+  // VRF read port (1R1W, shared with the other clusters): the old
+  // destination register, plus index registers for indexed forms.
   output logic                                vrf_read_valid_o,
   input  logic                                vrf_read_ready_i,
   output vcore_vld_pkg::vcore_vrf_read_req_t  vrf_read_req_o,
@@ -74,7 +80,8 @@ module vcore_vld_top #(
   vcore_vld_ctrl_t exec_ctrl;
   logic [MAXEMUL*VLEN-1:0] exec_data_group;
   logic [VLEN-1:0] exec_dst_old, exec_mask;
-  logic exec_mem_error;
+  logic exec_mem_error, exec_vl_trimmed;
+  logic [16:0] exec_new_vl;
   logic result_valid, result_ready;
   logic [VLEN-1:0] result_data;
   vcore_vld_rsp_t result_meta;
@@ -119,6 +126,8 @@ module vcore_vld_top #(
     .exec_data_group_o(exec_data_group),
     .exec_dst_old_o(exec_dst_old), .exec_mask_o(exec_mask),
     .exec_mem_error_o(exec_mem_error),
+    .exec_vl_trimmed_o(exec_vl_trimmed),
+    .exec_new_vl_o(exec_new_vl),
     .busy_o(busy_o)
   );
 
@@ -129,6 +138,7 @@ module vcore_vld_top #(
     .data_group_i(exec_data_group),
     .dst_old_i(exec_dst_old), .mask_i(exec_mask),
     .mem_error_i(exec_mem_error),
+    .vl_trimmed_i(exec_vl_trimmed), .new_vl_i(exec_new_vl),
     .rsp_valid_o(result_valid), .rsp_ready_i(result_ready),
     .result_o(result_data), .rsp_meta_o(result_meta)
   );

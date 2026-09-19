@@ -13,6 +13,8 @@ module vcore_vld_pipe #(
   input  logic [VLEN-1:0]                   dst_old_i,
   input  logic [VLEN-1:0]                   mask_i,
   input  logic                              mem_error_i,
+  input  logic                              vl_trimmed_i,
+  input  logic [16:0]                       new_vl_i,
   output logic                              rsp_valid_o,
   input  logic                              rsp_ready_i,
   output logic [VLEN-1:0]                   result_o,
@@ -61,6 +63,8 @@ module vcore_vld_pipe #(
         rsp_meta_q.last_beat  <= ctrl_i.last_beat;
         rsp_meta_q.illegal_op <= core_illegal;
         rsp_meta_q.mem_error  <= mem_error_i;
+        rsp_meta_q.vl_trimmed <= vl_trimmed_i;
+        rsp_meta_q.new_vl     <= new_vl_i;
       end
     end
   end

@@ -1,10 +1,8 @@
-// One destination register per beat, beat_index walking the EMUL group,
-// identical handshake shape to vcore_perm_sequencer: SEND one uop, wait for
-// its writeback acknowledgement, advance.
-//
-// Unlike the permutation cluster, none of the load operands come from the
-// VRF, so a beat's uop carries no source register addresses at all -- only
-// the destination register and the global element window this beat covers.
+// One destination register per beat. Beats walk the whole destination
+// group, which for a segment load is nf field groups of regs_per_field
+// registers laid end to end -- so the register address is simply
+// vd + beat_index for every form, and the group buffer, which is kept in
+// that same order, needs no field-aware addressing at all.
 module vcore_vld_sequencer #(
   parameter int unsigned VLEN = 128
 ) (
@@ -27,20 +25,20 @@ module vcore_vld_sequencer #(
   vcore_vld_decoded_t decoded_q;
   logic [2:0] beat_index_q;
   logic [3:0] total_beats_q;
-  int unsigned elements_per_beat;
+  int unsigned slots_per_beat;
 
-  assign decoded_ready_o  = (state_q == SEQ_IDLE)    && !flush_i;
-  assign uop_valid_o      = (state_q == SEQ_SEND)    && !flush_i;
-  assign beat_done_ready_o= (state_q == SEQ_WAIT_WB) && !flush_i;
+  assign decoded_ready_o   = (state_q == SEQ_IDLE)    && !flush_i;
+  assign uop_valid_o       = (state_q == SEQ_SEND)    && !flush_i;
+  assign beat_done_ready_o = (state_q == SEQ_WAIT_WB) && !flush_i;
 
   always_comb begin
-    // Slots per destination register are set by EEW, not by vtype.vsew.
-    elements_per_beat = (veew_bits(decoded_q.ctrl.eew) == 0) ? 0
-                      : (VLEN / veew_bits(decoded_q.ctrl.eew));
+    // Destination slots per register are set by the DATA element width.
+    slots_per_beat = (veew_bits(decoded_q.ctrl.eew) == 0) ? 0
+                   : (VLEN / veew_bits(decoded_q.ctrl.eew));
 
     uop_o = '0;
     uop_o.ctrl = decoded_q.ctrl;
-    uop_o.ctrl.element_base = 17'(int'(beat_index_q) * elements_per_beat);
+    uop_o.ctrl.element_base = 17'(int'(beat_index_q) * slots_per_beat);
     uop_o.ctrl.last_beat    = (int'(beat_index_q)+1 == int'(total_beats_q));
     uop_o.ctrl.vd_addr      = 5'(int'(decoded_q.vd) + int'(beat_index_q));
     uop_o.vd_addr           = uop_o.ctrl.vd_addr;
