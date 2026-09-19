@@ -28,10 +28,42 @@ CACHE     = Path(__file__).with_name(".rv_v_cache")
 STORE_FP_OPCODE = 0x27
 EEW_BY_WIDTH = {0x0: 8, 0x5: 16, 0x6: 32, 0x7: 64}
 
-# The decoder covers the whole encoding space already; the datapath does
-# not exist yet, so `execute` stays no until vcore_vst_memreq lands.
+# The decoder covers the whole encoding space. The `execute` column is not
+# typed by hand: tb_vcore_vst_ref logs every encoding it actually ran to a
+# passing completion into exec_coverage.txt, and that log is read back here.
+# No coverage file means no execute claims.
 DECODED_ALL = True
-EXECUTED: set[str] = set()
+COVERAGE = Path(__file__).with_name("exec_coverage.txt")
+
+
+def executed_set() -> set[str]:
+    """Mnemonics the golden-reference bench executed, read from its own log."""
+    if not COVERAGE.exists():
+        return set()
+    out: set[str] = set()
+    for line in COVERAGE.read_text(encoding="utf-8").split("\n"):
+        parts = line.split()
+        if len(parts) != 4:
+            continue
+        nf, mop, sumop, width = (int(x) for x in parts)
+        n = nf + 1
+        if mop == 0 and sumop == 0x0b:
+            out.add("vsm.v"); continue
+        if mop == 0 and sumop == 0x08:
+            out.add(f"vs{n}r.v"); continue
+        eew = EEW_BY_WIDTH[width]
+        if mop == 0:
+            out.add(f"vse{eew}.v" if nf == 0 else f"vsseg{n}e{eew}.v")
+        elif mop == 2:
+            out.add(f"vsse{eew}.v" if nf == 0 else f"vssseg{n}e{eew}.v")
+        elif mop == 1:
+            out.add(f"vsuxei{eew}.v" if nf == 0 else f"vsuxseg{n}ei{eew}.v")
+        elif mop == 3:
+            out.add(f"vsoxei{eew}.v" if nf == 0 else f"vsoxseg{n}ei{eew}.v")
+    return out
+
+
+EXECUTED: set[str] = executed_set()
 
 
 def fetch() -> str:
@@ -128,9 +160,9 @@ def main() -> None:
                 "decode": "yes" if dec else prior.get("decode", "no"),
                 "execute": "yes" if impl else prior.get("execute", "no"),
                 "decode_table_test": "tb_vcore_vst_decode_table",
-                "unit_test": prior.get("unit_test", ""),
+                "unit_test": "tb_vcore_vst_ref" if impl else prior.get("unit_test", ""),
                 "integration_test": prior.get("integration_test", ""),
-                "notes": prior.get("notes", "") or ("" if impl else "decode 완료, 데이터패스 미구현"),
+                "notes": ("" if impl else "decode 완료, 실행 미검증"),
             })
 
     if len(rows) != 133:
@@ -154,8 +186,10 @@ def main() -> None:
         "",
         f"현재 `decode=yes`: **{decoded}/133**, `execute=yes`: **{executed}/133**.",
         "",
-        "디코더는 인코딩 공간 전체를 덮고 `tb_vcore_vst_decode_table`이 vtype 전 구간에서",
-        "대조합니다. 데이터패스(`vcore_vst_memreq`)는 아직 없습니다 — 현재는 **프레임** 단계입니다.",
+        "`decode`는 `tb_vcore_vst_decode_table`이 인코딩 × vtype 전 구간에서 대조합니다.",
+        "`execute`는 손으로 적은 값이 아닙니다 — `tb_vcore_vst_ref`가 실제로 실행해서",
+        "통과시킨 인코딩을 `exec_coverage.txt`에 기록하고, 이 스크립트가 그 로그를 읽어",
+        "채웁니다. 로그가 없으면 execute는 전부 no가 됩니다.",
         "",
         "로드와 비교해 **없는 것**: fault-only-first(32개 적음), 그리고 whole-register가",
         "EEW별 4종이 아니라 레지스터 수별 4종입니다(`width`가 000으로 고정).",

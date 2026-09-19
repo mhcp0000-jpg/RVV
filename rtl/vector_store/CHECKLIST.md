@@ -1,4 +1,4 @@
-# vcore_vst — 벡터 STORE 클러스터 (프레임)
+# vcore_vst — 벡터 STORE 클러스터
 
 RVV 1.0 벡터 스토어 **133개 인코딩 전체**를 하나의 데이터패스로 처리하는 클러스터입니다.
 로드 클러스터(`rtl/vector_load`)와 같은 구조 — decode → issue FIFO → sequencer →
@@ -14,10 +14,10 @@ cmd ─▶ decode ─▶ issue FIFO ─▶ sequencer ─▶ memreq ─▶ wb ─
                      mem write     ◀────────────┘  (태그 있는 out-of-order)
 ```
 
-> **상태: 프레임입니다.** 디코더는 인코딩 × vtype 공간 전체에서 검증되었고
-> (7,980 probe) 데이터패스는 9개 directed 스모크를 통과합니다. 그러나
-> **golden reference 스윕이 아직 없습니다** — 체크리스트의 `execute`는 0/133입니다.
-> 로드 클러스터가 3,398 케이스 참조 모델로 검증된 것과 대비됩니다.
+> **상태: 133개 인코딩 전부 디코드 + 실행 검증 완료.** 디코더는 인코딩 × vtype
+> 공간 전체(7,980 probe)에서, 데이터패스는 golden reference 2,369 케이스 ×
+> 6개 설정 = **14,214 케이스런**에서 대조됩니다. 체크리스트의 `execute` 133/133은
+> 손으로 적은 값이 아니라 참조 벤치가 실제로 실행한 인코딩 로그에서 생성됩니다(§6).
 
 ---
 
@@ -182,11 +182,64 @@ EMUL × NFIELDS ≤ 8  ⟺  레지스터 예산 검사
 
 ## 6. 검증 결과
 
+### `tb_vcore_vst_ref` — golden reference (독립 데이터 표현)
+
+```
+STRESS=0  MAX_OUT=8   2369 cases, 2369 passed, 0 failed   (peak inflight 2)
+STRESS=1  MAX_OUT=1   2369 cases, 2369 passed, 0 failed   (peak inflight 1)
+STRESS=1  MAX_OUT=2   2369 cases, 2369 passed, 0 failed   (peak inflight 2)
+STRESS=1  MAX_OUT=4   2369 cases, 2369 passed, 0 failed   (peak inflight 4)
+STRESS=1  MAX_OUT=8   2369 cases, 2369 passed, 0 failed   (peak inflight 8)
+STRESS=1  MAX_OUT=16  2369 cases, 2369 passed, 0 failed   (peak inflight 8)
+                      ─────────────────────────────────
+                      14,214 케이스런, 0 실패
+MIX: 1,899 실행 · 470 불법 거부 · 24 트랩 · 97 이미지 예측불가
+     11,576 메모리 쓰기 · 5,617 VRF 읽기 · flush 15건 드레인/복구
+```
+
+참조 모델은 **DUT와 다른 데이터 표현**을 씁니다. 기대 상태는 바이트 이미지
+`exp_mem[]`이고 소스는 스펙의 표현 그대로 — 필드 f의 원소 i는 레지스터
+`vs3 + f*regs + i/epr` 의 바이트 `(i%epr)*B` — 로 주소를 계산합니다. DUT는 packed
+그룹 버퍼와 flat slot 산술을 씁니다. 합법성도 raw 인스트럭션 필드에서 다시
+유도합니다. 그래서 slot 산술의 실수가 자기 자신과 일치할 수 없습니다.
+
+**매 케이스마다 메모리 이미지 8,192바이트 전체를 비교합니다.** 잘못된 주소로 나간
+요청, 비활성 원소를 쓴 요청, 빠진 요청이 전부 걸립니다.
+
+`STRESS=1`은 랜덤 ready, 랜덤 1~8사이클 지연, 순서 뒤섞인 ack, VRF 읽기 스톨을
+겁니다. `MAX_OUT`을 1부터 16까지 훑는 것은 크레딧 윈도와 ordered 클램프가 윈도
+크기와 무관하게 성립하는지 보기 위해서입니다.
+
+**스윕 구성**
+
+| # | 내용 | 비고 |
+|---|---|---|
+| 1 | unit-stride: EEW × SEW × LMUL × vl × (mask, vstart) | 560 |
+| 2 | `vsm.v`: SEW × LMUL × vl 경계 (7, 8, 9 비트) | 168 |
+| 3 | strided: stride = eb / 3 / 0 / −eb | 448 |
+| 4 | indexed unordered·ordered: EEW × SEW × LMUL | 224 |
+| 5 | segment unit-stride: nf 2..8 × EEW × LMUL | 168 |
+| 6 | segment strided·unordered·ordered: nf 2..8 × EEW × LMUL | 168 |
+| 7 | whole-register: nreg 1/2/4/8 × vstart(0, 3, evl 초과) | 12 |
+| 8 | 폴트: 원소 0/1/3에서 트랩 + 무폴트 | 32 |
+| 9 | 불법 인코딩 20종 | 20 |
+| 10 | 합법 경계 8종 (스토어에 **없는** 규칙 포함) | 8 |
+| 11 | scan 도중 flush → 드레인 → 복구 | 16 |
+
+### `execute` 열은 주장이 아니라 로그입니다
+
+참조 벤치는 **합법으로 판정되고 끝까지 통과한** 인코딩을 매번
+`exec_coverage.txt`에 기록합니다. `generate_store_checklist.py`가 그 로그를 읽어
+`execute` 열을 채웁니다. 로그가 없으면 execute는 전부 `no`가 됩니다.
+
+```
+covered: 133 of 133   (missing: 없음, unexpected: 없음)
+```
+
 ### `tb_vcore_vst_decode_table` — 공식 인코딩 대조
 
 ```
 7980 probes, 4041 accepted, 3939 rejected, 0 failed
-PASS
 ```
 
 133개 인코딩 × vtype 전 구간(SEW × LMUL × 정렬)을 공식 opcode 파일에서 생성한
@@ -195,50 +248,94 @@ PASS
 ### `tb_vcore_vst_smoke` — directed 9개
 
 ```
-PASS vse32.v unmasked
-PASS vse32.v masked writes only active elements
-PASS vse32.v vstart skips prestart, LMUL=2 spans two registers
-PASS vsse32.v negative stride
-PASS vsseg3e32.v interleaves three fields
-PASS vsuxei32.v gathers addresses from the index vector
-PASS vsm.v stores ceil(vl/8) bytes
-PASS vs2r.v stores two whole registers regardless of vtype
-PASS reserved sumop: illegal_op and no memory traffic
 SMOKE TOTAL: 9 passed, 0 failed (66 writes, peak inflight 6)
 ```
 
-기대값은 flat slot 산술이 아니라 **스펙의 레지스터/바이트 표현**으로 따로 만듭니다
-(`expect_store()`), RTL과 같은 실수를 반복하지 않기 위해서입니다.
+### 프로토콜 어서션 (참조 벤치 안에서 상시)
 
-**이 스모크가 실제 RTL 버그 2개를 잡았습니다** (§4.1):
-
-1. `vrf_rsp_ready_o`가 `VST_READ_RSP`에서만 1 → 스캔 중 인덱스 레지스터 읽기가
-   영영 수락되지 않아 **데드락**. indexed / `vsm.v` / `vs2r.v` 케이스가 쓰기 0건.
-2. `vrf_req_o.addr` 멀티플렉서를 `rd_for_idx_q`로 골랐는데 요청 사이클엔 아직 0 →
-   인덱스 레지스터 대신 **vs3를 읽음**.
-
-둘 다 상태로 멀티플렉싱하도록 고치고 `rd_for_idx_q` → `idx_pending_q`로 이름을
-바꿨습니다.
+* 스톨 중 `mem_req` / `commit` / `vrf_read_req` 안정
+* 미결 요청이 없는데 ack가 오지 않을 것
+* 미결 쓰기가 있는 동안 `busy_o`는 1
+* `req_fire` 시점에 `inflight_q < credit_limit` (윈도 오버플로)
+* ordered 스토어는 `req_fire` 시점에 `inflight_q == 0` (원소 순서 유지)
+* **last_beat commit 시점에 미결 쓰기 0** — 호스트가 커밋하기 전에 모든 쓰기가
+  수락돼 있어야 합니다
 
 ### Lint
 
 7개 RTL 모듈 전부 `verilator --lint-only -Wall -Wno-UNUSEDSIGNAL` 클린.
 
----
+### 검증이 찾아낸 것
 
-## 7. 알려진 한계 / 다음 단계
+| 단계 | 결함 | 고친 내용 |
+|---|---|---|
+| 스모크 | 스캔 중 인덱스 레지스터 읽기의 `vrf_rsp_ready_o`가 0 → **데드락** (indexed / `vsm.v` / `vs2r.v` 쓰기 0건) | ready를 상태로 뽑음 |
+| 스모크 | 읽기 포트 주소 mux를 `rd_for_idx_q`로 선택 → 요청 사이클엔 아직 0이라 인덱스 대신 **vs3를 읽음** | mux를 상태로 뽑고 `idx_pending_q`로 개명 |
+| 참조(MAX_OUT=1) | ordered 어서션 `inflight_q <= 1`이 `INFLIGHT_W`가 1일 때 항상 참 (Verilator `CMPCONST`) | `req_fire` 시점 `inflight_q == 0`으로 재표현 |
+| 참조(flush) | (벤치 쪽) VRF 포트 모델이 flush에 리셋되지 않아 응답이 고립 | 아래 **TOP 요구사항** 참조 |
+| 합성 | `vcore_vst_sequencer`에 `$mul` 1개 + `$div` 1개 (`beat * (VLEN/EEW)`) | `beat << log2(VLEN/EEW)`. **로드 클러스터에도 같은 결함이 있어 같이 고쳤습니다** |
 
-1. **golden reference 스윕이 없다 — 가장 큰 구멍.** `tb_vcore_vst_ref.sv`가 있어야
-   `execute`가 0/133 → 133/133이 됩니다. 생성기는 unordered 형태에서 **주소 중복을
-   배제**해야 합니다 (§1의 6번): stride ≠ 0, 인덱스 벡터 중복 제거. `vsoxei`만
-   last-writer 의미가 정의되므로 중복 주소를 허용할 수 있습니다.
-2. **요청 병합(coalescing)이 없다.** unit-stride 스토어가 원소마다 요청을 하나씩
-   냅니다. 캐시에 붙이기 전에 해야 합니다 — 로드 CHECKLIST §8과 같은 항목입니다.
-3. **합성 면적 수치가 없다.** 로드는 sv2v + yosys로 셀/플롭을 셌습니다. 스토어도
-   같은 방식으로 재야 TOP 예산이 나옵니다.
-4. **TOP 통합이 안 됐다.** VRF 읽기 포트 아비터에 스토어를 넣고,
-   `VCORE_ARCHITECTURE.html` §1 상태 표와 §10 6번(Store)을 갱신해야 합니다.
-5. **flush 드레인이 스모크에 없다.** `VST_DRAIN` 경로는 lint만 통과했습니다.
-   미결 ack가 남은 채 flush가 들어오는 케이스를 directed로 짜야 합니다.
-6. **예외 보고 경로가 프레임 수준.** error 비트는 집계되지만 호스트의 pre-commit
-   fault check(Saturn 방식)와 어떻게 맞물리는지는 로드처럼 문서화되지 않았습니다.
+**TOP 요구사항 하나가 여기서 드러났습니다.** 이 클러스터는 flush 시
+`vrf_rsp_ready_o`를 내리고, 이미 공중에 떠 있던 VRF 읽기 응답을 수거하지 않습니다.
+따라서 **TOP의 VRF 읽기 아비터도 같은 flush로 함께 리셋되어야 합니다.** 그렇지
+않으면 그 응답이 영원히 고립되고 다음 명령어가 소스 레지스터를 못 받습니다.
+로드 클러스터도 구조가 같습니다.
+
+## 7. 하드웨어 비용
+
+`sv2v` + `yosys 0.33` (`proc; opt -fast`) 기준 generic cell / 플립플롭 비트입니다.
+**표준셀 면적이 아니라 RTL 구조 지표**입니다 — 합성 라이브러리·STA 없이는 면적을
+주장하지 않습니다.
+
+| 모듈 | cells | 플롭 비트 |
+|---|---:|---:|
+| `vcore_vst_decode` | 186 | 0 (조합) |
+| `vcore_vst_memreq` | 286 | 1,699 |
+| `vcore_vst_sequencer` | 49 | 346 |
+| `vcore_vst_wb` | 36 | 22 |
+| `vcore_vst_issue_fifo` | 35 | 6 + 엔트리 메모리 |
+| **합계** | **592** | **2,073** |
+
+곱셈기 `$mul`, 나눗셈기 `$div`, 나머지 `$mod`: **전부 0개**. 주소는 누산기 하나,
+슬롯·필드 오프셋은 시프트, 합법성은 log2 산술입니다(§4.3, §5).
+
+같은 방식으로 잰 로드 클러스터와의 비교:
+
+| | LOAD (177개) | STORE (133개) |
+|---|---:|---:|
+| cells 합계 | 2,687 | **592** |
+| 플롭 비트 합계 | 2,549 | 2,073 |
+| `$mul` / `$div` / `$mod` | 0 / 0 / 0 | 0 / 0 / 0 |
+
+스토어가 로드의 **22%**인 이유는 한 모듈에 있습니다: `vcore_vld_assemble`이 혼자
+1,923 cells입니다. tail / prestart / mask-agnostic 정책을 목적지 바이트마다 고르는
+멀티플렉서 밭인데, 스토어에는 목적지가 없어서 그 단이 통째로 존재하지 않습니다(§1의 2번).
+그룹 버퍼 1,024비트는 양쪽 다 같습니다.
+
+## 8. 알려진 한계 / 다음 단계 (주의사항)
+
+1. **요청 병합(coalescing)이 없다.** unit-stride 스토어가 원소마다 요청을 하나씩
+   냅니다. `vse8.v` vl=16이면 1바이트 쓰기 16개가 나갑니다. 캐시에 붙이기 전에
+   해야 합니다 — 로드 CHECKLIST §8 1번과 같은 항목이고, 둘이 같은 병합기를 쓰는
+   것이 맞습니다.
+2. **TOP의 VRF 읽기 아비터가 flush를 함께 받아야 한다.** §6에서 나온 요구사항입니다.
+   이 클러스터는 flush 시 `vrf_rsp_ready_o`를 내리고 공중의 응답을 수거하지
+   않으므로, 아비터가 같이 리셋되지 않으면 그 응답이 고립됩니다. 로드도 같습니다.
+3. **TOP 통합이 안 됐다.** 읽기 포트 아비터에 스토어를 넣어야 하는데, 스토어는
+   명령어당 최대 8 레지스터를 읽습니다(§1의 1번) — permutation과 정면으로 부딪히는
+   지점이라 아비터 정책을 정해야 합니다. `VCORE_ARCHITECTURE.html` §1 상태 표와
+   §10 6번(Store)도 갱신 대상입니다.
+4. **예외 보고가 플래그 하나뿐.** `mem_error`는 집계되지만 어느 원소에서 났는지,
+   호스트의 pre-commit fault check(Saturn 방식)에 무엇을 넘겨야 하는지는 정하지
+   않았습니다. 로드의 fault-only-first처럼 원소 인덱스를 들고 있어야 할 수도
+   있습니다. 참조 벤치의 폴트 스윕도 **플래그만** 검사합니다 — 트랩한 스토어의
+   메모리 이미지는 이미 수락된 쓰기가 남아 있어 정의되지 않기 때문입니다.
+5. **unordered 중복 주소는 검증할 수 없다 — 원리상.** 참조 벤치 2,369 케이스 중
+   97건이 여기 해당해서 이미지 비교를 건너뜁니다(플래그·프로토콜·타임아웃은 여전히
+   검사). stride 0, stride < 원소 크기, 중복 인덱스가 그 경우입니다. 아키텍처가
+   답을 정의하지 않으므로 이건 구멍이 아니라 경계입니다 — `vsoxei`만 정의되고,
+   그쪽은 전부 비교합니다.
+6. **`vstart`가 세그먼트 중간을 가리키는 경우가 스펙상 모호하다.** 현재 구현은
+   `vstart`를 원소 단위로만 봅니다(필드 중간에서 재개하지 않음). RVV 1.0은 세그먼트
+   스토어의 트랩 후 재개를 원소 경계로 규정하므로 맞지만, 호스트가 필드 중간
+   `vstart`를 넣으면 어떻게 되는지는 문서화되지 않았습니다.

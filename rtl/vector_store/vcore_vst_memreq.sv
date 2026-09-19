@@ -264,9 +264,13 @@ module vcore_vst_memreq #(
     if (rst_ni && !flush_i && req_fire)
       assert (inflight_q < credit_limit)
         else $error("vst_memreq: outstanding window overflow");
+  // vsoxei / vsoxseg must not have a second write in the air: the previous
+  // one has to be acknowledged first, or the element order is gone. Phrased
+  // against zero rather than against the window size so the check does not
+  // become trivially true when MAX_OUTSTANDING is 1.
   always @(posedge clk_i)
-    if (rst_ni && !flush_i && (state_q == VST_SCAN) && uop_q.ctrl.ordered)
-      assert (inflight_q <= INFLIGHT_W'(1))
+    if (rst_ni && !flush_i && req_fire && uop_q.ctrl.ordered)
+      assert (inflight_q == '0)
         else $error("vst_memreq: ordered indexed store lost its element order");
 `endif
 

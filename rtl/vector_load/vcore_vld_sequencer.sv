@@ -25,7 +25,10 @@ module vcore_vld_sequencer #(
   vcore_vld_decoded_t decoded_q;
   logic [2:0] beat_index_q;
   logic [3:0] total_beats_q;
-  int unsigned slots_per_beat;
+  // Slots per beat is VLEN/EEW, always a power of two, so the beat's element
+  // base is a SHIFT. Computing it as beat_index * (VLEN / EEW) costs a
+  // multiplier and a divider, which is what this used to do.
+  logic [2:0] spb_log2;
 
   assign decoded_ready_o   = (state_q == SEQ_IDLE)    && !flush_i;
   assign uop_valid_o       = (state_q == SEQ_SEND)    && !flush_i;
@@ -33,12 +36,12 @@ module vcore_vld_sequencer #(
 
   always_comb begin
     // Destination slots per register are set by the DATA element width.
-    slots_per_beat = (veew_bits(decoded_q.ctrl.eew) == 0) ? 0
-                   : (VLEN / veew_bits(decoded_q.ctrl.eew));
+    spb_log2 = 3'($clog2(VLEN) - 3 - int'(veew_size(decoded_q.ctrl.eew)));
 
     uop_o = '0;
     uop_o.ctrl = decoded_q.ctrl;
-    uop_o.ctrl.element_base = 17'(int'(beat_index_q) * slots_per_beat);
+    uop_o.ctrl.element_base = veew_supported(decoded_q.ctrl.eew)
+                            ? 17'(17'(beat_index_q) << spb_log2) : 17'd0;
     uop_o.ctrl.last_beat    = (int'(beat_index_q)+1 == int'(total_beats_q));
     uop_o.ctrl.vd_addr      = 5'(int'(decoded_q.vd) + int'(beat_index_q));
     uop_o.vd_addr           = uop_o.ctrl.vd_addr;

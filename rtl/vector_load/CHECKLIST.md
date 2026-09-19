@@ -325,6 +325,29 @@ reject된 행은 `ctrl.op`가 `VLDOP_INVALID`로 남아 죽은 opcode를 흘리�
 이전 버전이 주소·버퍼 경로에 곱셈기 2개, 합법성 검사에 나눗셈기 3개/나머지 1개/곱셈기
 3개를 갖고 있었고, 지금은 0개입니다(§3.2, §5).
 
+> **정정 (스토어 클러스터 작업 중 발견).** 위 표는 `decode`와 `memreq`만 잰
+> 것이었습니다. `vcore_vld_sequencer`에 곱셈기 1개와 나눗셈기 1개가 남아
+> 있었습니다 — `beat_index * (VLEN / EEW)`. `VLEN/EEW`는 항상 2의 거듭제곱이므로
+> `beat_index << log2(VLEN/EEW)`로 바꿨습니다. 스토어 시퀀서에도 같은 결함이
+> 있었고 함께 고쳤습니다. 지금은 **클러스터 전체에 `$mul`/`$div`/`$mod` 0개**입니다.
+
+클러스터 전체를 같은 방식으로 다시 잰 값입니다.
+
+| 모듈 | cells | 플롭 비트 |
+|---|---:|---:|
+| `vcore_vld_decode` | 201 | 0 (조합) |
+| `vcore_vld_memreq` | 406 | 1,850 |
+| `vcore_vld_sequencer` | 49 | 348 |
+| `vcore_vld_assemble` | 1,923 | 0 (조합) |
+| `vcore_vld_pipe` | 23 | 171 |
+| `vcore_vld_wb` | 50 | 174 |
+| `vcore_vld_issue_fifo` | 35 | 6 + 엔트리 메모리 |
+| **합계** | **2,687** | **2,549** |
+
+`vcore_vld_assemble`이 1,923 cells로 클러스터의 72%입니다. tail / prestart /
+mask-agnostic 정책을 목적지 바이트마다 고르는 멀티플렉서 밭인데, 스토어 클러스터는
+목적지가 없어 이 단이 아예 없습니다 — 그래서 스토어 전체가 592 cells입니다.
+
 추가된 플립플롭 273비트의 내역:
 
 | 레지스터 | 비트 | 용도 |
